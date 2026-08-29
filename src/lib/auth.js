@@ -1,0 +1,36 @@
+export function saveTokens(accessToken, refreshToken) {
+  localStorage.setItem("access_token", accessToken);
+  localStorage.setItem("refresh_token", refreshToken);
+}
+
+export function getAccessToken() {
+  return localStorage.getItem("access_token");
+}
+
+export function getRefreshToken() {
+  return localStorage.getItem("refresh_token");
+}
+
+export function clearTokens() {
+  localStorage.removeItem("access_token");
+  localStorage.removeItem("refresh_token");
+}
+
+export async function refreshAccessToken() {
+  const refreshToken = getRefreshToken();
+  if (!refreshToken) return false;
+
+  const response = await fetch("http://localhost:3000/v1/auth/refresh", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ refresh_token: refreshToken }),
+  });
+  const result = await response.json();
+
+  if (result.data) {
+    saveTokens(result.data.access_token, result.data.refresh_token);
+    return true;
+  }
+  clearTokens();
+  return false;
+}
