@@ -1,5 +1,6 @@
-import { getAccessToken } from "./auth";
-const BASE_URL = "http://localhost:3000/v1";
+import { getAccessToken, refreshAccessToken } from "./auth";
+
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
 async function request(method, path, body, auth = false, isRetry = false) {
   const headers = { "Content-Type": "application/json" };
