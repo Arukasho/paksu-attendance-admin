@@ -3,11 +3,13 @@
 import { useEffect, useState } from "react";
 import { apiClient } from "@/lib/apiClient";
 import { formatWib, toWibInputValue, fromWibInputValue } from "@/lib/dateUtils";
+import { OfflineBanner } from "@/components/OfflineBanner";
 
 export default function EventsPage() {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [offline, setOffline] = useState(false);
 
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
