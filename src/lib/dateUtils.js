@@ -42,8 +42,13 @@ export function fromWibInputValue(inputValue) {
 
   if ([year, month, day, hour, minute].some((n) => Number.isNaN(n)))
     return null;
+  if (year < 1 || year > 9999) return null; // reject overflowed/garbage years
+  if (month < 1 || month > 12 || day < 1 || day > 31) return null;
 
   const utcMs =
     Date.UTC(year, month - 1, day, hour, minute) - 7 * 60 * 60 * 1000;
-  return new Date(utcMs).toISOString();
+  const result = new Date(utcMs);
+
+  if (isNaN(result.getTime())) return null; // final safety net
+  return result.toISOString();
 }

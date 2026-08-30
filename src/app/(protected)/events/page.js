@@ -348,6 +348,8 @@ function EditEventModal({ id, onClose, onSaved }) {
         />
         <input
           type="datetime-local"
+          min="0000-01-01T00:00"
+          max="9999-12-31T23:59"
           value={form.event_datetime}
           onChange={(e) => setForm({ ...form, event_datetime: e.target.value })}
           className="mb-3 w-full rounded border px-3 py-2"
