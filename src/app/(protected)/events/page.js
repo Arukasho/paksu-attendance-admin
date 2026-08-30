@@ -135,7 +135,7 @@ function CreateEventModal({ onClose, onCreated }) {
       "/admin/events",
       {
         name,
-        event_datetime: formatWib(eventDatetime),
+        event_datetime: new Date(eventDatetime).toISOString(),
         location,
         checkin_open_minutes: Number(openMinutes),
         checkin_close_minutes: Number(closeMinutes),
@@ -287,9 +287,7 @@ function EditEventModal({ id, onClose, onSaved }) {
       {
         name: form.name,
         // FIX: Only format the datetime if it's a valid string
-        event_datetime: form.event_datetime
-          ? formatWib(form.event_datetime)
-          : null,
+        event_datetime: new Date(form.event_datetime).toISOString(),
         location: form.location,
         checkin_open_minutes: Number(form.checkin_open_minutes),
         checkin_close_minutes: Number(form.checkin_close_minutes),
@@ -307,11 +305,9 @@ function EditEventModal({ id, onClose, onSaved }) {
 
   if (!form) return null;
 
-  // FIX: Convert the string from formatWib back to a Date before slicing
-  const dateObj = new Date(formatWib(form.event_datetime).replace(" ", "T"));
-  const localDatetime = isNaN(dateObj.getTime())
-    ? ""
-    : dateObj.toISOString().slice(0, 16);
+  const localDatetime = new Date(form.event_datetime)
+    .toISOString()
+    .slice(0, 16);
 
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-black/40">
