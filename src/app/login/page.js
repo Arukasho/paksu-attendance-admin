@@ -11,13 +11,13 @@ export default function LoginPage() {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
 
+  const router = useRouter();
+
   useEffect(() => {
     if (getAccessToken()) {
       router.push("/dashboard");
     }
   }, [router]);
-
-  const router = useRouter();
 
   async function handleSubmit(e) {
     e.preventDefault();
