@@ -4,6 +4,14 @@ import { useEffect, useState } from "react";
 import { apiClient } from "@/lib/apiClient";
 import { formatWib, toWibInputValue, fromWibInputValue } from "@/lib/dateUtils";
 import { OfflineBanner } from "@/components/OfflineBanner";
+import { exportToCsv } from "@/lib/csvExport";
+
+const EVENT_ATTENDANCE_EXPORT_COLUMNS = [
+  { label: "Full Name", key: "full_name" },
+  { label: "University", key: "university" },
+  { label: "Attended", format: (row) => (row.attended ? "Yes" : "No") },
+  { label: "Checked In At", key: "checked_in_at" },
+];
 
 export default function EventsPage() {
   const [events, setEvents] = useState([]);
@@ -498,6 +506,11 @@ function EventAttendeesModal({ id, onClose }) {
     (attendee) => attendee.attended,
   ).length;
 
+  async function handleExport() {
+    const filename = `${data.event.name.replace(/[^a-z0-9]/gi, "_")}_attendance.csv`;
+    exportToCsv(filename, EVENT_ATTENDANCE_EXPORT_COLUMNS, data.attendees);
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4">
       <div className="flex max-h-[80vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-xl">
@@ -631,6 +644,13 @@ function EventAttendeesModal({ id, onClose }) {
 
         {/* Footer */}
         <div className="flex justify-end border-t border-slate-200 px-6 py-4">
+          <button
+            onClick={handleExport}
+            className="rounded-lg px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-100"
+          >
+            Export CSV
+          </button>
+
           <button
             type="button"
             onClick={onClose}

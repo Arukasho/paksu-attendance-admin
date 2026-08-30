@@ -2,6 +2,20 @@
 
 import { useEffect, useState } from "react";
 import { apiClient } from "@/lib/apiClient";
+import { exportToCsv } from "@/lib/csvExport";
+
+const PARTICIPANT_EXPORT_COLUMNS = [
+  { label: "Full Name", key: "full_name" },
+  { label: "Username", key: "username" },
+  { label: "Phone", key: "phone" },
+  { label: "Email", key: "email" },
+  { label: "University", key: "university" },
+  { label: "Stambuk", key: "stambuk" },
+  { label: "Domicile Address", key: "domicile_address" },
+  { label: "Birth Place", key: "birth_place" },
+  { label: "Birth Date", key: "birth_date" },
+  { label: "Events Attended", key: "events_attended" },
+];
 
 export default function ParticipantsPage() {
   const [participants, setParticipants] = useState([]);
@@ -85,6 +99,15 @@ export default function ParticipantsPage() {
     }
   }
 
+  async function handleExport() {
+    const result = await apiClient.get(
+      "/admin/participants?limit=100000",
+      true,
+    );
+    if (result.code === "network_error" || !result.data) return;
+    exportToCsv("participants.csv", PARTICIPANT_EXPORT_COLUMNS, result.data);
+  }
+
   return (
     <div className="min-h-full bg-slate-50 p-6 md:p-8">
       <div className="mx-auto max-w-6xl">
@@ -104,6 +127,13 @@ export default function ParticipantsPage() {
             className="w-full shrink-0 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 sm:w-auto"
           >
             + Add Participant
+          </button>
+
+          <button
+            onClick={handleExport}
+            className="w-full shrink-0 rounded-lg bg-green-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-green-700 sm:w-auto"
+          >
+            Export CSV
           </button>
         </div>
 
