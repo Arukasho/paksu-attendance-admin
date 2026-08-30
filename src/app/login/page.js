@@ -21,64 +21,141 @@ export default function LoginPage() {
 
   async function handleSubmit(e) {
     e.preventDefault();
+
     setLoading(true);
     setError(null);
 
-    const result = await apiClient.post("/auth/login", {
-      identifier,
-      password,
-    });
+    try {
+      const result = await apiClient.post("/auth/login", {
+        identifier,
+        password,
+      });
 
-    setLoading(false);
+      if (!result.data) {
+        setError(result.message || "Login failed.");
+        return;
+      }
 
-    if (!result.data) {
-      setError(result.message || "Login failed.");
-      return;
+      if (result.data.user.role !== "admin") {
+        setError("This account does not have admin access.");
+        return;
+      }
+
+      saveTokens(result.data.access_token, result.data.refresh_token);
+
+      saveUser(result.data.user);
+
+      router.push("/dashboard");
+    } catch (err) {
+      console.error(err);
+      setError("Unable to log in. Please try again.");
+    } finally {
+      setLoading(false);
     }
-
-    if (result.data.user.role !== "admin") {
-      setError("This account does not have admin access.");
-      return;
-    }
-
-    saveTokens(result.data.access_token, result.data.refresh_token);
-    saveUser(result.data.user);
-    router.push("/dashboard");
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-100">
-      <form
-        onSubmit={handleSubmit}
-        className="w-full max-w-sm rounded-lg bg-white p-8 shadow"
-      >
-        <h1 className="mb-6 text-xl font-bold">Admin Login</h1>
+    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-8">
+      <div className="w-full max-w-md">
+        {/* Brand */}
+        <div className="mb-8 text-center">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-900 text-xl font-bold text-white shadow-sm">
+            P
+          </div>
 
-        <input
-          type="text"
-          placeholder="Username, Email or Phone"
-          value={identifier}
-          onChange={(e) => setIdentifier(e.target.value)}
-          className="mb-3 w-full rounded border px-3 py-2"
-        />
-        <input
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="mb-4 w-full rounded border px-3 py-2"
-        />
+          <h1 className="text-2xl font-bold text-slate-900">Paksu Admin</h1>
 
-        {error && <p className="mb-3 text-sm text-red-600">{error}</p>}
+          <p className="mt-1 text-sm text-slate-500">
+            Attendance Management System
+          </p>
+        </div>
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full rounded bg-blue-600 py-2 text-white disabled:opacity-50"
-        >
-          {loading ? "Logging in..." : "Login"}
-        </button>
-      </form>
+        {/* Login Card */}
+        <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="border-b border-slate-200 px-6 py-5 sm:px-8">
+            <h2 className="text-lg font-bold text-slate-900">Welcome back</h2>
+
+            <p className="mt-1 text-sm text-slate-500">
+              Sign in to access the admin dashboard.
+            </p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="px-6 py-6 sm:px-8">
+            <div className="space-y-5">
+              {/* Identifier */}
+              <div>
+                <label
+                  htmlFor="identifier"
+                  className="mb-1.5 block text-sm font-medium text-slate-700"
+                >
+                  Username, Email or Phone
+                </label>
+
+                <input
+                  id="identifier"
+                  type="text"
+                  placeholder="Enter your username, email or phone"
+                  value={identifier}
+                  onChange={(e) => setIdentifier(e.target.value)}
+                  autoComplete="username"
+                  required
+                  className="w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                />
+              </div>
+
+              {/* Password */}
+              <div>
+                <label
+                  htmlFor="password"
+                  className="mb-1.5 block text-sm font-medium text-slate-700"
+                >
+                  Password
+                </label>
+
+                <input
+                  id="password"
+                  type="password"
+                  placeholder="Enter your password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="current-password"
+                  required
+                  className="w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                />
+              </div>
+
+              {/* Error */}
+              {error && (
+                <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-3.5 py-3 text-sm text-red-700">
+                  <span className="mt-0.5">!</span>
+                  <p>{error}</p>
+                </div>
+              )}
+
+              {/* Submit */}
+              <button
+                type="submit"
+                disabled={loading}
+                className="flex w-full items-center justify-center rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-200 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {loading ? (
+                  <>
+                    <span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                    Logging in...
+                  </>
+                ) : (
+                  "Sign In"
+                )}
+              </button>
+            </div>
+          </form>
+        </div>
+
+        {/* Footer */}
+        <p className="mt-6 text-center text-xs text-slate-400">
+          Paksu Attendance Management
+        </p>
+      </div>
     </div>
   );
 }
