@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { apiClient } from "@/lib/apiClient";
-import { formatWib } from "@/lib/dateUtils";
+import { formatWib, toWibInputValue, fromWibInputValue } from "@/lib/dateUtils";
 
 export default function EventsPage() {
   const [events, setEvents] = useState([]);
@@ -135,7 +135,7 @@ function CreateEventModal({ onClose, onCreated }) {
       "/admin/events",
       {
         name,
-        event_datetime: new Date(eventDatetime).toISOString(),
+        event_datetime: fromWibInputValue(eventDatetime),
         location,
         checkin_open_minutes: Number(openMinutes),
         checkin_close_minutes: Number(closeMinutes),
@@ -280,6 +280,15 @@ function EditEventModal({ id, onClose, onSaved }) {
       .then((result) => setForm(result.data));
   }, [id]);
 
+  useEffect(() => {
+    apiClient.get(`/admin/events/${id}`, true).then((result) => {
+      setForm({
+        ...result.data,
+        event_datetime: toWibInputValue(result.data.event_datetime),
+      });
+    });
+  }, [id]);
+
   async function handleSubmit(e) {
     e.preventDefault();
     const result = await apiClient.patch(
@@ -287,7 +296,7 @@ function EditEventModal({ id, onClose, onSaved }) {
       {
         name: form.name,
         // FIX: Only format the datetime if it's a valid string
-        event_datetime: new Date(form.event_datetime).toISOString(),
+        event_datetime: fromWibInputValue(form.event_datetime),
         location: form.location,
         checkin_open_minutes: Number(form.checkin_open_minutes),
         checkin_close_minutes: Number(form.checkin_close_minutes),
@@ -325,7 +334,7 @@ function EditEventModal({ id, onClose, onSaved }) {
         />
         <input
           type="datetime-local"
-          value={localDatetime}
+          value={form.event_datetime}
           onChange={(e) => setForm({ ...form, event_datetime: e.target.value })}
           className="mb-3 w-full rounded border px-3 py-2"
         />
