@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { apiClient } from "@/lib/apiClient";
+import { formatWib } from "@/lib/dateUtils";
 
 export default function ParticipantsPage() {
   const [participants, setParticipants] = useState([]);

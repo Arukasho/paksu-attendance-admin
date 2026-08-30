@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { apiClient } from "@/lib/apiClient";
+import { formatWib } from "@/lib/dateUtils";
 
 export default function EventsPage() {
   const [events, setEvents] = useState([]);
@@ -56,9 +57,7 @@ export default function EventsPage() {
             {events.map((event) => (
               <tr key={event.id} className="border-b">
                 <td className="p-3">{event.name}</td>
-                <td className="p-3">
-                  {new Date(event.event_datetime).toLocaleString()}
-                </td>
+                <td className="p-3">{formatWib(event.event_datetime)}</td>
                 <td className="p-3">
                   {event.is_active ? "Active" : "Inactive"}
                 </td>
@@ -136,7 +135,7 @@ function CreateEventModal({ onClose, onCreated }) {
       "/admin/events",
       {
         name,
-        event_datetime: new Date(eventDatetime).toISOString(),
+        event_datetime: formatWib(eventDatetime),
         location,
         checkin_open_minutes: Number(openMinutes),
         checkin_close_minutes: Number(closeMinutes),
@@ -253,7 +252,7 @@ function EventAttendeesModal({ id, onClose }) {
                     <span className="text-main">({a.university || "-"})</span>
                   </span>
                   <span className="text-main">
-                    {new Date(a.checked_in_at).toLocaleTimeString()}
+                    {formatWib(a.checked_in_at)}
                   </span>
                 </li>
               ))}
@@ -287,7 +286,7 @@ function EditEventModal({ id, onClose, onSaved }) {
       `/admin/events/${id}`,
       {
         name: form.name,
-        event_datetime: new Date(form.event_datetime).toISOString(),
+        event_datetime: formatWib(form.event_datetime),
         location: form.location,
         checkin_open_minutes: Number(form.checkin_open_minutes),
         checkin_close_minutes: Number(form.checkin_close_minutes),
@@ -306,7 +305,7 @@ function EditEventModal({ id, onClose, onSaved }) {
   if (!form) return null;
 
   // datetime-local inputs need "YYYY-MM-DDTHH:mm" format, not a full ISO string
-  const localDatetime = new Date(form.event_datetime)
+  const localDatetime = formatWib(form.event_datetime)
     .toISOString()
     .slice(0, 16);
 
