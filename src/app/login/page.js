@@ -1,15 +1,23 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { apiClient } from "@/lib/apiClient";
 import { saveTokens } from "@/lib/auth";
+import { saveTokens, saveUser, getAccessToken } from "@/lib/auth";
 
 export default function LoginPage() {
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (getAccessToken()) {
+      router.push("/dashboard");
+    }
+  }, [router]);
+
   const router = useRouter();
 
   async function handleSubmit(e) {
@@ -35,6 +43,7 @@ export default function LoginPage() {
     }
 
     saveTokens(result.data.access_token, result.data.refresh_token);
+    saveUser(result.data.user);
     router.push("/dashboard");
   }
 

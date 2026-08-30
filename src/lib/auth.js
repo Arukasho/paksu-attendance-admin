@@ -14,6 +14,7 @@ export function getRefreshToken() {
 export function clearTokens() {
   localStorage.removeItem("access_token");
   localStorage.removeItem("refresh_token");
+  localStorage.removeItem("admin_user");
 }
 
 export async function refreshAccessToken() {
@@ -36,4 +37,13 @@ export async function refreshAccessToken() {
   }
   clearTokens();
   return false;
+}
+
+export function saveUser(user) {
+  localStorage.setItem("admin_user", JSON.stringify(user));
+}
+
+export function getUser() {
+  const raw = localStorage.getItem("admin_user");
+  return raw ? JSON.parse(raw) : null;
 }

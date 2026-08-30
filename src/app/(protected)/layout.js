@@ -3,10 +3,11 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { getAccessToken, clearTokens } from "@/lib/auth";
+import { getAccessToken, clearTokens, getUser } from "@/lib/auth";
 
 export default function ProtectedLayout({ children }) {
   const [checked, setChecked] = useState(false);
+  const [user, setUser] = useState(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -14,6 +15,7 @@ export default function ProtectedLayout({ children }) {
     if (!token) {
       router.push("/login");
     } else {
+      setUser(getUser());
       setChecked(true);
     }
   }, [router]);
@@ -49,6 +51,12 @@ export default function ProtectedLayout({ children }) {
             Participants
           </Link>
         </nav>
+        {user && (
+          <div className="mb-4 border-t border-slate-700 pt-4 text-sm">
+            <p className="font-semibold">{user.full_name}</p>
+            <p className="text-slate-400">@{user.username}</p>
+          </div>
+        )}
         <button
           onClick={handleLogout}
           className="mt-8 block w-full rounded px-3 py-2 text-left hover:bg-slate-800"
