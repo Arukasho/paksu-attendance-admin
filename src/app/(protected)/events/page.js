@@ -286,7 +286,10 @@ function EditEventModal({ id, onClose, onSaved }) {
       `/admin/events/${id}`,
       {
         name: form.name,
-        event_datetime: formatWib(form.event_datetime),
+        // FIX: Only format the datetime if it's a valid string
+        event_datetime: form.event_datetime
+          ? formatWib(form.event_datetime)
+          : null,
         location: form.location,
         checkin_open_minutes: Number(form.checkin_open_minutes),
         checkin_close_minutes: Number(form.checkin_close_minutes),
@@ -304,10 +307,11 @@ function EditEventModal({ id, onClose, onSaved }) {
 
   if (!form) return null;
 
-  // datetime-local inputs need "YYYY-MM-DDTHH:mm" format, not a full ISO string
-  const localDatetime = formatWib(form.event_datetime)
-    .toISOString()
-    .slice(0, 16);
+  // FIX: Convert the string from formatWib back to a Date before slicing
+  const dateObj = new Date(formatWib(form.event_datetime).replace(" ", "T"));
+  const localDatetime = isNaN(dateObj.getTime())
+    ? ""
+    : dateObj.toISOString().slice(0, 16);
 
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-black/40">
@@ -315,6 +319,7 @@ function EditEventModal({ id, onClose, onSaved }) {
         onSubmit={handleSubmit}
         className="w-full max-w-md rounded-lg bg-white p-6 shadow"
       >
+        {/* ... rest of your JSX is fine ... */}
         <h2 className="mb-4 text-lg font-bold">Edit Event</h2>
 
         <input
