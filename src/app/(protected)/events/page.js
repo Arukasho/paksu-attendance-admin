@@ -131,6 +131,13 @@ function CreateEventModal({ onClose, onCreated }) {
 
   async function handleSubmit(e) {
     e.preventDefault();
+
+    const eventDatetimeIso = fromWibInputValue(form.event_datetime); // or fromWibInputValue(eventDatetime) in Create
+    if (!eventDatetimeIso) {
+      setError("Please enter a complete, valid date and time.");
+      return;
+    }
+
     const result = await apiClient.post(
       "/admin/events",
       {
@@ -291,6 +298,13 @@ function EditEventModal({ id, onClose, onSaved }) {
 
   async function handleSubmit(e) {
     e.preventDefault();
+
+    const eventDatetimeIso = fromWibInputValue(form.event_datetime); // or fromWibInputValue(eventDatetime) in Create
+    if (!eventDatetimeIso) {
+      setError("Please enter a complete, valid date and time.");
+      return;
+    }
+
     const result = await apiClient.patch(
       `/admin/events/${id}`,
       {

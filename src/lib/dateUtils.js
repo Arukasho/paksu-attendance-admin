@@ -32,9 +32,17 @@ export function toWibInputValue(isoString) {
 // Converts a datetime-local input's raw value (interpreted as WIB wall-clock
 // time) back into a correct UTC ISO string to send to the backend.
 export function fromWibInputValue(inputValue) {
+  if (!inputValue || !inputValue.includes("T")) return null;
+
   const [datePart, timePart] = inputValue.split("T");
+  if (!datePart || !timePart) return null;
+
   const [year, month, day] = datePart.split("-").map(Number);
   const [hour, minute] = timePart.split(":").map(Number);
+
+  if ([year, month, day, hour, minute].some((n) => Number.isNaN(n)))
+    return null;
+
   const utcMs =
     Date.UTC(year, month - 1, day, hour, minute) - 7 * 60 * 60 * 1000;
   return new Date(utcMs).toISOString();
