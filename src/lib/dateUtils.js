@@ -42,7 +42,7 @@ export function fromWibInputValue(inputValue) {
 
   if ([year, month, day, hour, minute].some((n) => Number.isNaN(n)))
     return null;
-  if (year < 1 || year > 9999) return null; // reject overflowed/garbage years
+  if (year < 2000 || year > 3000) return null; // reject overflowed/garbage years
   if (month < 1 || month > 12 || day < 1 || day > 31) return null;
 
   const utcMs =

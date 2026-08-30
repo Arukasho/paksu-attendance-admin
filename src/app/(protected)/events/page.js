@@ -282,12 +282,6 @@ function EditEventModal({ id, onClose, onSaved }) {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    apiClient
-      .get(`/admin/events/${id}`, true)
-      .then((result) => setForm(result.data));
-  }, [id]);
-
-  useEffect(() => {
     apiClient.get(`/admin/events/${id}`, true).then((result) => {
       setForm({
         ...result.data,
@@ -299,7 +293,7 @@ function EditEventModal({ id, onClose, onSaved }) {
   async function handleSubmit(e) {
     e.preventDefault();
 
-    const eventDatetimeIso = fromWibInputValue(form.event_datetime); // or fromWibInputValue(eventDatetime) in Create
+    const eventDatetimeIso = fromWibInputValue(form.event_datetime);
     if (!eventDatetimeIso) {
       setError("Please enter a complete, valid date and time.");
       return;
@@ -309,8 +303,7 @@ function EditEventModal({ id, onClose, onSaved }) {
       `/admin/events/${id}`,
       {
         name: form.name,
-        // FIX: Only format the datetime if it's a valid string
-        event_datetime: fromWibInputValue(form.event_datetime),
+        event_datetime: eventDatetimeIso,
         location: form.location,
         checkin_open_minutes: Number(form.checkin_open_minutes),
         checkin_close_minutes: Number(form.checkin_close_minutes),
@@ -328,17 +321,12 @@ function EditEventModal({ id, onClose, onSaved }) {
 
   if (!form) return null;
 
-  const localDatetime = new Date(form.event_datetime)
-    .toISOString()
-    .slice(0, 16);
-
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-black/40">
       <form
         onSubmit={handleSubmit}
         className="w-full max-w-md rounded-lg bg-white p-6 shadow"
       >
-        {/* ... rest of your JSX is fine ... */}
         <h2 className="mb-4 text-lg font-bold">Edit Event</h2>
 
         <input
@@ -348,8 +336,8 @@ function EditEventModal({ id, onClose, onSaved }) {
         />
         <input
           type="datetime-local"
-          min="0000-01-01T00:00"
-          max="9999-12-31T23:59"
+          min="2000-01-01T00:00"
+          max="3000-12-31T23:59"
           value={form.event_datetime}
           onChange={(e) => setForm({ ...form, event_datetime: e.target.value })}
           className="mb-3 w-full rounded border px-3 py-2"
