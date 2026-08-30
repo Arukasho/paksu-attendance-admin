@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { apiClient } from "@/lib/apiClient";
-import { saveTokens } from "@/lib/auth";
 import { saveTokens, saveUser, getAccessToken } from "@/lib/auth";
 
 export default function LoginPage() {
