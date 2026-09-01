@@ -22,8 +22,8 @@ export default function PrivacyPolicyPage() {
           <div className="px-6 py-7 sm:px-8 sm:py-9">
             <Section title="Who we are">
               <p>
-                PAKSU Attendance ("the App") is an event attendance tracking
-                system operated by PAKSU for internal use by members and event
+                PAKSU Attendance App is an event attendance tracking system
+                operated by PAKSU for internal use by members and event
                 attendees.
               </p>
             </Section>
@@ -45,7 +45,7 @@ export default function PrivacyPolicyPage() {
               </p>
 
               <List>
-                <li>University/institution name and student ID (Stambuk)</li>
+                <li>University/institution name and Stambuk</li>
                 <li>Home/domicile address</li>
                 <li>Place and date of birth</li>
                 <li>A profile photo</li>
@@ -110,10 +110,10 @@ export default function PrivacyPolicyPage() {
                   If you have questions about this privacy policy or your data,
                   contact us at{" "}
                   <a
-                    href="mailto:alwi.jeremy@gmail.com"
+                    href="mailto:alwijeremy@gmail.com"
                     className="font-medium text-blue-600 underline decoration-blue-200 underline-offset-2 transition hover:text-blue-700 hover:decoration-blue-400"
                   >
-                    alwi.jeremy@gmail.com
+                    alwijeremy@gmail.com
                   </a>
                   .
                 </p>
@@ -124,7 +124,7 @@ export default function PrivacyPolicyPage() {
 
         {/* Footer */}
         <footer className="mt-6 text-center text-xs text-slate-400">
-          PAKSU Attendance
+          @2026 PAKSU Attendance App. All rights reserved.
         </footer>
       </div>
     </main>

@@ -21,6 +21,11 @@ const navigation = [
     label: "Participants",
     icon: "♙",
   },
+  {
+    href: "/activity-log",
+    label: "Activity Log",
+    icon: "⫶☰",
+  },
 ];
 
 export default function ProtectedLayout({ children }) {
@@ -65,12 +70,16 @@ export default function ProtectedLayout({ children }) {
         {/* Logo / Brand */}
         <div className="flex h-16 items-center border-b border-slate-200 px-5">
           <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-900 text-sm font-bold text-white">
-              P
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg">
+              <img
+                src="splash_icon.png"
+                alt="PAKSU Attendance App Logo"
+                className="h-full w-full object-contain"
+              />
             </div>
 
             <div>
-              <h1 className="text-sm font-bold text-slate-900">Paksu Admin</h1>
+              <h1 className="text-sm font-bold text-slate-900">PAKSU</h1>
 
               <p className="text-[11px] text-slate-400">
                 Attendance Management

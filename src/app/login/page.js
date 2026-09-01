@@ -59,21 +59,25 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         {/* Brand */}
         <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-900 text-xl font-bold text-white shadow-sm">
-            P
+          <div className="mx-auto mb-4 flex h-24 w-24 items-center justify-center rounded-2xl">
+            <img
+              src="splash_icon.png"
+              alt="PAKSU Attendance App Logo"
+              className="h-full w-full object-contain"
+            />
           </div>
 
-          <h1 className="text-2xl font-bold text-slate-900">Paksu Admin</h1>
+          <h1 className="text-2xl font-bold text-slate-900">
+            Paksu Attendance App
+          </h1>
 
-          <p className="mt-1 text-sm text-slate-500">
-            Attendance Management System
-          </p>
+          <p className="mt-1 text-sm text-slate-500">Admin Dashboard</p>
         </div>
 
         {/* Login Card */}
         <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
           <div className="border-b border-slate-200 px-6 py-5 sm:px-8">
-            <h2 className="text-lg font-bold text-slate-900">Welcome back</h2>
+            <h2 className="text-lg font-bold text-slate-900">Halo</h2>
 
             <p className="mt-1 text-sm text-slate-500">
               Sign in to access the admin dashboard.
@@ -153,7 +157,7 @@ export default function LoginPage() {
 
         {/* Footer */}
         <p className="mt-6 text-center text-xs text-slate-400">
-          Paksu Attendance Management
+          @2026 PAKSU Attendance App. All rights reserved.
         </p>
       </div>
     </div>
