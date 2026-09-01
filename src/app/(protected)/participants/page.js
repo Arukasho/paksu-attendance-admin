@@ -91,10 +91,7 @@ export default function ParticipantsPage() {
   }
 
   async function handleExport() {
-    const result = await apiClient.get(
-      "/admin/participants?limit=100000",
-      true,
-    );
+    const result = await apiClient.get("/admin/participants", true);
     if (result.code === "network_error" || !result.data) return;
     exportToCsv("participants.csv", PARTICIPANT_EXPORT_COLUMNS, result.data);
   }
@@ -102,7 +99,6 @@ export default function ParticipantsPage() {
   return (
     <div className="min-h-full bg-slate-50 p-6 md:p-8">
       <div className="mx-auto max-w-6xl">
-        {/* Header */}
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold text-slate-900">Participants</h1>
