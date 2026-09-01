@@ -83,15 +83,6 @@ export default function ParticipantsPage() {
       setError(null);
 
       await apiClient.delete(`/admin/participants/${id}`, true);
-
-      if (result.code === "network_error") {
-        setError(
-          "You're offline. Check your internet connection and try again.",
-        );
-        setParticipants([]);
-        return;
-      }
-
       await loadParticipants();
     } catch (err) {
       console.error(err);
