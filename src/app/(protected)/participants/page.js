@@ -268,7 +268,15 @@ export default function ParticipantsPage() {
   );
 }
 
-function ParticipantRow({ participant, isLast, onView, onEdit, onDelete }) {
+function ParticipantRow({
+  participant,
+  isLast,
+  currentUserId,
+  onView,
+  onEdit,
+  onDelete,
+  onToggleAdmin,
+}) {
   const eventCount = participant.events_attended ?? 0;
   const isSelf = participant.id === currentUserId;
   const isAdmin = participant.role === "admin";
