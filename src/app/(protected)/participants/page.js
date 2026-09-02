@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { apiClient } from "@/lib/apiClient";
 import { exportToCsv } from "@/lib/csvExport";
+import { getUser } from "@/lib/auth";
 
 const PARTICIPANT_EXPORT_COLUMNS = [
   { label: "Full Name", key: "full_name" },
@@ -26,6 +27,8 @@ export default function ParticipantsPage() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [viewingId, setViewingId] = useState(null);
+
+  const currentUser = getUser();
 
   async function loadParticipants(searchValue = search) {
     try {
@@ -88,6 +91,27 @@ export default function ParticipantsPage() {
       console.error(err);
       setError("Failed to delete participant.");
     }
+  }
+
+  async function handleToggleAdmin(participant) {
+    const newRole = participant.role === "admin" ? "attendee" : "admin";
+    const confirmed = window.confirm(
+      newRole === "admin"
+        ? `Grant admin access to ${participant.full_name}?`
+        : `Revoke admin access from ${participant.full_name}?`,
+    );
+    if (!confirmed) return;
+
+    const result = await apiClient.patch(
+      `/admin/participants/${participant.id}/role`,
+      { role: newRole },
+      true,
+    );
+    if (!result.data) {
+      setError(result.message || "Failed to update role.");
+      return;
+    }
+    await loadParticipants();
   }
 
   async function handleExport() {
@@ -199,9 +223,11 @@ export default function ParticipantsPage() {
                 key={participant.id}
                 participant={participant}
                 isLast={index === participants.length - 1}
+                currentUserId={currentUser?.id}
                 onView={() => setViewingId(participant.id)}
                 onEdit={() => setEditingId(participant.id)}
                 onDelete={() => handleDelete(participant.id)}
+                onToggleAdmin={() => handleToggleAdmin(participant)}
               />
             ))}
           </div>
@@ -244,6 +270,8 @@ export default function ParticipantsPage() {
 
 function ParticipantRow({ participant, isLast, onView, onEdit, onDelete }) {
   const eventCount = participant.events_attended ?? 0;
+  const isSelf = participant.id === currentUserId;
+  const isAdmin = participant.role === "admin";
 
   return (
     <div
@@ -303,13 +331,25 @@ function ParticipantRow({ participant, isLast, onView, onEdit, onDelete }) {
             Edit
           </button>
 
-          <button
-            type="button"
-            onClick={onDelete}
-            className="rounded-lg border border-red-200 px-3 py-2 text-sm font-medium text-red-600 transition hover:bg-red-50"
-          >
-            Delete
-          </button>
+          {!isSelf && (
+            <button
+              type="button"
+              onClick={onToggleAdmin}
+              className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
+            >
+              {isAdmin ? "Revoke Admin" : "Make Admin"}
+            </button>
+          )}
+
+          {!isSelf && !isAdmin && (
+            <button
+              type="button"
+              onClick={onDelete}
+              className="rounded-lg border border-red-200 px-3 py-2 text-sm font-medium text-red-600 transition hover:bg-red-50"
+            >
+              Delete
+            </button>
+          )}
         </div>
       </div>
     </div>
