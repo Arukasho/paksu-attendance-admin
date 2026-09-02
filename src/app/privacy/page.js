@@ -4,8 +4,12 @@ export default function PrivacyPolicyPage() {
       <div className="mx-auto max-w-3xl">
         {/* Header */}
         <header className="mb-8">
-          <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-slate-900 text-sm font-bold text-white shadow-sm">
-            P
+          <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-xl">
+            <img
+              src="splash_icon.png"
+              alt="PAKSU Attendance App Logo"
+              className="h-full w-full object-contain"
+            />
           </div>
 
           <h1 className="text-3xl font-bold tracking-tight text-slate-900">
