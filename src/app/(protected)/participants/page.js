@@ -6,16 +6,16 @@ import { exportToCsv } from "@/lib/csvExport";
 import { getUser } from "@/lib/auth";
 
 const PARTICIPANT_EXPORT_COLUMNS = [
-  { label: "Full Name", key: "full_name" },
+  { label: "Nama Lengkap", key: "full_name" },
   { label: "Username", key: "username" },
   { label: "Phone", key: "phone" },
   { label: "Email", key: "email" },
-  { label: "University", key: "university" },
+  { label: "Asal Universitas", key: "university" },
   { label: "Stambuk", key: "stambuk" },
-  { label: "Domicile Address", key: "domicile_address" },
-  { label: "Birth Place", key: "birth_place" },
-  { label: "Birth Date", key: "birth_date" },
-  { label: "Events Attended", key: "events_attended" },
+  { label: "Alamat Domisili", key: "domicile_address" },
+  { label: "Tempat Lahir", key: "birth_place" },
+  { label: "Tanggal Lahir", key: "birth_date" },
+  { label: "Event yang Diikuti", key: "events_attended" },
 ];
 
 export default function ParticipantsPage() {
