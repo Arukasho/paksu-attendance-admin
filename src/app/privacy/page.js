@@ -9,106 +9,110 @@ export default function PrivacyPolicyPage() {
           </div>
 
           <h1 className="text-3xl font-bold tracking-tight text-slate-900">
-            Privacy Policy
+            Kebijakan Privasi
           </h1>
 
           <p className="mt-2 text-sm text-slate-500">
-            Last updated: 30 August 2026
+            Terakhir diperbarui: 30 Agustus 2026
           </p>
         </header>
 
         {/* Policy */}
         <article className="rounded-2xl border border-slate-200 bg-white shadow-sm">
           <div className="px-6 py-7 sm:px-8 sm:py-9">
-            <Section title="Who we are">
+            <Section title="Tentang Kami">
               <p>
-                PAKSU Attendance App is an event attendance tracking system
-                operated by PAKSU for internal use by members and event
-                attendees.
+                PAKSU Attendance App adalah sistem pencatatan kehadiran acara
+                yang dioperasikan oleh PAKSU untuk penggunaan internal oleh
+                anggota dan peserta acara.
               </p>
             </Section>
 
-            <Section title="What information we collect">
-              <p>When you register for an account, we collect:</p>
+            <Section title="Informasi yang Kami Kumpulkan">
+              <p>Saat Anda mendaftarkan akun, kami mengumpulkan:</p>
 
               <List>
-                <li>Full name, username, phone number, and email address</li>
+                <li>Nama lengkap, username, nomor telepon, dan alamat email</li>
 
                 <li>
-                  A password (stored securely as an irreversible hash — we
-                  cannot see or recover it)
+                  Kata sandi (disimpan secara aman dalam bentuk hash yang tidak
+                  dapat dikembalikan ke bentuk semula — kami tidak dapat melihat
+                  atau memulihkannya)
                 </li>
               </List>
 
               <p className="mt-4">
-                Optionally, through your profile, you may also provide:
+                Secara opsional, melalui profil Anda, Anda juga dapat
+                memberikan:
               </p>
 
               <List>
-                <li>University/institution name and Stambuk</li>
-                <li>Home/domicile address</li>
-                <li>Place and date of birth</li>
-                <li>A profile photo</li>
+                <li>Nama universitas/institusi dan Stambuk</li>
+                <li>Alamat tempat tinggal/domisili</li>
+                <li>Tempat dan tanggal lahir</li>
+                <li>Foto profil</li>
               </List>
 
               <p className="mt-4">
-                When you check in to an event, we record the event and the
-                date/time of your check-in.
+                Saat Anda melakukan check-in pada suatu acara/kegiatan, kami
+                mencatat acara tersebut serta tanggal dan waktu check-in Anda.
               </p>
             </Section>
 
-            <Section title="Why we collect it">
+            <Section title="Mengapa Kami Mengumpulkan Informasi Tersebut">
               <p>
-                This information is used solely to operate the attendance
-                system: identifying you, tracking which events you've attended,
-                and allowing event organizers to view attendance records and
-                reports.
+                Informasi ini digunakan semata-mata untuk menjalankan sistem
+                kehadiran, yaitu untuk mengidentifikasi Anda, mencatat acara
+                yang telah Anda hadiri, serta memungkinkan pengurus PAKSU untuk
+                melihat catatan dan laporan kehadiran.
               </p>
             </Section>
 
-            <Section title="Who has access to your data">
+            <Section title="Siapa yang Memiliki Akses ke Data Anda">
               <p>
-                Your data is accessible to authorized administrators of PAKSU
-                through an internal admin dashboard, used to manage events and
-                view attendance. We do not sell, rent, or share your personal
-                data with any third party outside our organization.
+                Data Anda dapat diakses oleh admin PAKSU yang berwenang melalui
+                dashboard admin internal, yang digunakan untuk mengelola acara
+                dan melihat data kehadiran. Kami tidak menjual, menyewakan, atau
+                membagikan data pribadi Anda kepada pihak ketiga di luar PAKSU.
               </p>
             </Section>
 
-            <Section title="How your data is stored">
+            <Section title="Bagaimana Data Anda Disimpan">
               <p>
-                Data is stored in a secured PostgreSQL database (hosted via
-                Supabase) and accessed through our backend service (hosted via
-                Railway). Passwords are hashed using bcrypt and are never stored
-                or transmitted in plain text. Profile photos are stored via
-                Supabase Storage.
+                Data disimpan dalam database PostgreSQL yang diamankan dan
+                di-host melalui Supabase, serta diakses melalui layanan backend
+                kami yang di-host melalui Railway. Kata sandi di-hash
+                menggunakan bcrypt dan tidak pernah disimpan atau dikirim dalam
+                bentuk teks biasa. Foto profil disimpan melalui Supabase
+                Storage.
               </p>
             </Section>
 
-            <Section title="Data retention and deletion">
+            <Section title="Penyimpanan dan Penghapusan Data">
               <p>
-                We retain your data for as long as your account is active. If
-                you would like your account and associated data deleted, please
-                contact us using the information below — we will process
-                deletion requests within 3 days, except where retaining certain
-                records is required for legitimate organizational or legal
-                purposes (e.g. historical attendance records).
+                Kami menyimpan data Anda selama akun Anda masih aktif. Jika Anda
+                ingin akun dan data terkait Anda dihapus, silakan hubungi kami
+                melalui informasi kontak di bawah ini. Kami akan memproses
+                permintaan penghapusan dalam waktu 3-7 hari, kecuali apabila
+                penyimpanan data tertentu diperlukan untuk kepentingan
+                organisasi atau hukum yang sah.
               </p>
             </Section>
 
-            <Section title="Your rights">
+            <Section title="Hak Anda">
               <p>
-                You may request access to, correction of, or deletion of your
-                personal data at any time by contacting us. Most profile fields
-                can also be updated directly within the app.
+                Anda dapat meminta akses, perbaikan, atau penghapusan data
+                pribadi Anda kapan saja dengan menghubungi kami. Sebagian besar
+                informasi profil juga dapat diperbarui secara langsung melalui
+                aplikasi.
               </p>
             </Section>
 
-            <Section title="Contact us" last>
+            <Section title="Hubungi Kami" last>
               <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
                 <p>
-                  If you have questions about this privacy policy or your data,
-                  contact us at{" "}
+                  Jika Anda memiliki pertanyaan mengenai kebijakan privasi ini
+                  atau data Anda, silakan hubungi kami melalui{" "}
                   <a
                     href="mailto:alwijeremy@gmail.com"
                     className="font-medium text-blue-600 underline decoration-blue-200 underline-offset-2 transition hover:text-blue-700 hover:decoration-blue-400"
