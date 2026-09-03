@@ -15,6 +15,11 @@ const PARTICIPANT_EXPORT_COLUMNS = [
   { label: "Alamat Domisili", key: "domicile_address" },
   { label: "Tempat Lahir", key: "birth_place" },
   { label: "Tanggal Lahir", key: "birth_date" },
+  { label: "Sudah Punya KTB", key: "ktb_has" },
+  { label: "Ingin Bergabung KTB", key: "want_join_ktb" },
+  { label: "Melayani Sebagai", key: "serve_as" },
+  { label: "Melayani Sebagai (Lainnya)", key: "serve_as_other" },
+  { label: "Status Pernikahan", key: "marriage_status" },
   { label: "Event yang Diikuti", key: "events_attended" },
 ];
 
@@ -218,18 +223,82 @@ export default function ParticipantsPage() {
           </div>
         ) : (
           <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-            {participants.map((participant, index) => (
-              <ParticipantRow
-                key={participant.id}
-                participant={participant}
-                isLast={index === participants.length - 1}
-                currentUserId={currentUser?.id}
-                onView={() => setViewingId(participant.id)}
-                onEdit={() => setEditingId(participant.id)}
-                onDelete={() => handleDelete(participant.id)}
-                onToggleAdmin={() => handleToggleAdmin(participant)}
-              />
-            ))}
+            {loading ? (
+              <div className="rounded-xl border border-slate-200 bg-white p-10 text-center">
+                <div className="mx-auto mb-3 h-6 w-6 animate-spin rounded-full border-2 border-slate-200 border-t-blue-600" />
+                <p className="text-sm text-slate-500">
+                  Loading participants...
+                </p>
+              </div>
+            ) : participants.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-slate-300 bg-white px-6 py-14 text-center">
+                <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-xl">
+                  👤
+                </div>
+                <h2 className="font-semibold text-slate-900">
+                  {search.trim()
+                    ? "No participants found"
+                    : "No participants yet"}
+                </h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  {search.trim()
+                    ? "Try a different search term."
+                    : "Add your first participant to get started."}
+                </p>
+                {!search && (
+                  <button
+                    type="button"
+                    onClick={() => setShowAddForm(true)}
+                    className="mt-5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+                  >
+                    Add Participant
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[900px] text-left">
+                    <thead className="border-b border-slate-200 bg-slate-50">
+                      <tr>
+                        <th className="px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                          Participant
+                        </th>
+                        <th className="px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                          Phone
+                        </th>
+                        <th className="px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                          University
+                        </th>
+                        <th className="px-4 py-3.5 text-center text-xs font-semibold uppercase tracking-wider text-slate-500">
+                          Events
+                        </th>
+                        <th className="px-4 py-3.5 text-center text-xs font-semibold uppercase tracking-wider text-slate-500">
+                          Role
+                        </th>
+                        <th className="px-6 py-3.5 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">
+                          Actions
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {participants.map((participant, index) => (
+                        <ParticipantTableRow
+                          key={participant.id}
+                          participant={participant}
+                          isLast={index === participants.length - 1}
+                          currentUserId={currentUser?.id}
+                          onView={() => setViewingId(participant.id)}
+                          onEdit={() => setEditingId(participant.id)}
+                          onDelete={() => handleDelete(participant.id)}
+                          onToggleAdmin={() => handleToggleAdmin(participant)}
+                        />
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -268,7 +337,7 @@ export default function ParticipantsPage() {
   );
 }
 
-function ParticipantRow({
+function ParticipantTableRow({
   participant,
   isLast,
   currentUserId,
@@ -280,87 +349,100 @@ function ParticipantRow({
   const eventCount = participant.events_attended ?? 0;
   const isSelf = participant.id === currentUserId;
   const isAdmin = participant.role === "admin";
-
   return (
-    <div
-      className={`p-5 transition hover:bg-slate-50 md:px-6 ${
-        !isLast ? "border-b border-slate-200" : ""
-      }`}
+    <tr
+      className={`transition hover:bg-slate-50 ${!isLast ? "border-b border-slate-200" : ""}`}
     >
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        {/* Identity */}
-        <div className="flex min-w-0 items-center gap-4">
-          {/* Avatar */}
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-blue-50 text-sm font-bold text-blue-700">
+      {/* Participant */}
+      <td className="px-6 py-4">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-50 text-sm font-bold text-blue-700">
             {getInitials(participant.full_name)}
           </div>
-
           <div className="min-w-0">
-            <h2 className="truncate text-base font-semibold text-slate-900">
+            <p className="truncate text-sm font-semibold text-slate-900">
               {participant.full_name || "-"}
-            </h2>
-
-            <p className="mt-0.5 text-sm text-slate-500">
+            </p>
+            <p className="mt-0.5 truncate text-xs text-slate-500">
               @{participant.username || "-"}
             </p>
-
-            <div className="mt-1 flex flex-wrap gap-x-2 text-xs text-slate-400">
-              {participant.university && <span>{participant.university}</span>}
-
-              {participant.phone && participant.university && <span>•</span>}
-
-              {participant.phone && <span>{participant.phone}</span>}
-            </div>
+            {participant.email && (
+              <p className="mt-0.5 truncate text-xs text-slate-400">
+                {participant.email}
+              </p>
+            )}
           </div>
         </div>
-
-        {/* Right side */}
-        <div className="flex flex-wrap items-center gap-3 lg:justify-end">
-          <div className="mr-1 text-sm text-slate-500">
-            <span className="font-semibold text-slate-800">{eventCount}</span>{" "}
-            {eventCount === 1 ? "event" : "events"}
-          </div>
-
-          <div className="hidden h-5 w-px bg-slate-200 lg:block" />
-
+      </td>
+      {/* Phone */}
+      <td className="px-4 py-4">
+        <span className="text-sm text-slate-600">
+          {participant.phone || "-"}
+        </span>
+      </td>
+      {/* University */}
+      <td className="max-w-[220px] px-4 py-4">
+        <span className="block truncate text-sm text-slate-600">
+          {participant.university || "-"}
+        </span>
+      </td>
+      {/* Events */}
+      <td className="px-4 py-4 text-center">
+        <span className="font-semibold text-slate-800">{eventCount}</span>
+        <span className="ml-1 text-xs text-slate-400">
+          {eventCount === 1 ? "event" : "events"}
+        </span>
+      </td>
+      {/* Role */}
+      <td className="px-4 py-4 text-center">
+        {isAdmin ? (
+          <span className="inline-flex rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700">
+            Admin
+          </span>
+        ) : (
+          <span className="inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-500">
+            Attendee
+          </span>
+        )}
+      </td>
+      {/* Actions */}
+      <td className="px-6 py-4">
+        <div className="flex justify-end gap-2">
           <button
             type="button"
             onClick={onView}
-            className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
+            className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-medium text-slate-700 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
           >
             View
           </button>
-
           <button
             type="button"
             onClick={onEdit}
-            className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
+            className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-medium text-slate-700 transition hover:bg-slate-100"
           >
             Edit
           </button>
-
           {!isSelf && (
             <button
               type="button"
               onClick={onToggleAdmin}
-              className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
+              className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-medium text-slate-700 transition hover:bg-slate-100"
             >
               {isAdmin ? "Revoke Admin" : "Make Admin"}
             </button>
           )}
-
           {!isSelf && !isAdmin && (
             <button
               type="button"
               onClick={onDelete}
-              className="rounded-lg border border-red-200 px-3 py-2 text-sm font-medium text-red-600 transition hover:bg-red-50"
+              className="rounded-lg border border-red-200 px-3 py-2 text-xs font-medium text-red-600 transition hover:bg-red-50"
             >
               Delete
             </button>
           )}
         </div>
-      </div>
-    </div>
+      </td>
+    </tr>
   );
 }
 
@@ -506,6 +588,11 @@ function AddParticipantModal({ onClose, onCreated }) {
             required
           />
 
+          <p className="text-xs text-slate-400">
+            KTB, marriage status, and service role can be set after the
+            participant is created, via Edit.
+          </p>
+
           {error && (
             <div className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
               {error}
@@ -550,6 +637,30 @@ function FormField({
   );
 }
 
+// Generic select field for constrained-value fields (booleans stored as
+// tri-state "", "true", "false", or a fixed set of string options).
+function SelectField({ label, value, onChange, options }) {
+  return (
+    <label className="block">
+      <span className="mb-1.5 block text-sm font-medium text-slate-700">
+        {label}
+      </span>
+
+      <select
+        value={value ?? ""}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+      >
+        {options.map((opt) => (
+          <option key={opt.value} value={opt.value}>
+            {opt.label}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
 function ModalFooter({
   onClose,
   submitText,
@@ -578,6 +689,18 @@ function ModalFooter({
       )}
     </div>
   );
+}
+
+function selectToBool(value) {
+  if (value === "true") return true;
+  if (value === "false") return false;
+  return null;
+}
+
+function boolToSelectValue(value) {
+  if (value === true) return "true";
+  if (value === false) return "false";
+  return "";
 }
 
 function EditParticipantModal({ id, onClose, onSaved }) {
@@ -628,24 +751,27 @@ function EditParticipantModal({ id, onClose, onSaved }) {
       setSaving(true);
       setError(null);
 
+      const payload = {
+        full_name: form.full_name.trim(),
+        username: form.username.trim(),
+        phone: form.phone.trim(),
+        email: form.email.trim(),
+        university: form.university?.trim() || "",
+        serve_as: form.serve_as?.trim() || "",
+        serve_as_more: form.serve_as_more?.trim() || "",
+        ktb_has: form.ktb_has,
+        want_join_ktb: form.want_join_ktb,
+      };
+
+      if (form.marriage_status) {
+        payload.marriage_status = form.marriage_status;
+      }
+
       const result = await apiClient.patch(
         `/admin/participants/${id}`,
-        {
-          full_name: form.full_name.trim(),
-          username: form.username.trim(),
-          phone: form.phone.trim(),
-          email: form.email.trim(),
-          university: form.university?.trim() || "",
-        },
+        payload,
         true,
       );
-
-      if (result.code === "network_error") {
-        setError(
-          "You're offline. Check your internet connection and try again.",
-        );
-        return;
-      }
 
       if (result.code === "network_error") {
         setError(
@@ -692,7 +818,7 @@ function EditParticipantModal({ id, onClose, onSaved }) {
       onClose={onClose}
     >
       <form onSubmit={handleSubmit}>
-        <div className="space-y-4 px-6 py-5">
+        <div className="max-h-[65vh] space-y-4 overflow-y-auto px-6 py-5">
           <FormField
             label="Full Name"
             value={form.full_name || ""}
@@ -732,6 +858,73 @@ function EditParticipantModal({ id, onClose, onSaved }) {
             onChange={(value) => setForm({ ...form, university: value })}
             placeholder="University"
           />
+
+          <div className="border-t border-slate-100 pt-4">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-400">
+              KTB &amp; Ministry
+            </p>
+
+            <div className="space-y-4">
+              <SelectField
+                label="Sudah Punya KTB"
+                value={boolToSelectValue(form.ktb_has)}
+                onChange={(value) =>
+                  setForm({
+                    ...form,
+                    ktb_has: selectToBool(value),
+                  })
+                }
+                options={[
+                  { value: "", label: "Not set" },
+                  { value: "true", label: "Yes" },
+                  { value: "false", label: "No" },
+                ]}
+              />
+
+              <SelectField
+                label="Ingin Bergabung KTB"
+                value={boolToSelectValue(form.want_join_ktb)}
+                onChange={(value) =>
+                  setForm({
+                    ...form,
+                    want_join_ktb: selectToBool(value),
+                  })
+                }
+                options={[
+                  { value: "", label: "Not set" },
+                  { value: "true", label: "Yes" },
+                  { value: "false", label: "No" },
+                ]}
+              />
+
+              <FormField
+                label="Melayani Sebagai"
+                value={form.serve_as || ""}
+                onChange={(value) => setForm({ ...form, serve_as: value })}
+                placeholder="e.g. Worship, Usher, Multimedia"
+              />
+
+              <FormField
+                label="Melayani Sebagai (Lainnya)"
+                value={form.serve_as_more || ""}
+                onChange={(value) => setForm({ ...form, serve_as_more: value })}
+                placeholder="e.g. Koordinator, Dokumentasi"
+              />
+
+              <SelectField
+                label="Status Pernikahan"
+                value={form.marriage_status || ""}
+                onChange={(value) =>
+                  setForm({ ...form, marriage_status: value })
+                }
+                options={[
+                  { value: "", label: "Not set" },
+                  { value: "single", label: "Single" },
+                  { value: "married", label: "Married" },
+                ]}
+              />
+            </div>
+          </div>
 
           {error && (
             <div className="rounded-lg bg-red-50 px-3 py-2.5 text-sm text-red-700">
@@ -854,6 +1047,39 @@ function ViewParticipantModal({ id, onClose }) {
 
         <div className="border-t border-slate-200" />
 
+        {/* KTB & Ministry */}
+        <div className="px-6 py-5">
+          <h3 className="mb-4 text-xs font-semibold uppercase tracking-wider text-slate-400">
+            KTB &amp; Ministry
+          </h3>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <InfoItem
+              label="Sudah Punya KTB"
+              value={formatBool(data.ktb_has)}
+            />
+
+            <InfoItem
+              label="Ingin Bergabung KTB"
+              value={formatBool(data.want_join_ktb)}
+            />
+
+            <InfoItem
+              label="Melayani Sebagai"
+              value={[data.serve_as, data.serve_as_more]
+                .filter(Boolean)
+                .join(", ")}
+            />
+
+            <InfoItem
+              label="Status Pernikahan"
+              value={formatMarriageStatus(data.marriage_status)}
+            />
+          </div>
+        </div>
+
+        <div className="border-t border-slate-200" />
+
         {/* Attendance */}
         <div className="px-6 py-5">
           <div className="mb-4 flex items-center justify-between">
@@ -906,6 +1132,18 @@ function ViewParticipantModal({ id, onClose }) {
       <ModalFooter onClose={onClose} submitText="Close" hideSubmit />
     </Modal>
   );
+}
+
+function formatBool(value) {
+  if (value === true) return "Yes";
+  if (value === false) return "No";
+  return null;
+}
+
+function formatMarriageStatus(value) {
+  if (value === "single") return "Single";
+  if (value === "married") return "Married";
+  return null;
 }
 
 function InfoItem({ label, value }) {
