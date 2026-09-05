@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { apiClient } from "@/lib/apiClient";
 import { exportToCsv } from "@/lib/csvExport";
 import { getUser } from "@/lib/auth";
+import useSWR, { mutate } from "swr";
+import { fetcher } from "@/lib/apiClient";
 
 const PARTICIPANT_EXPORT_COLUMNS = [
   { label: "Nama Lengkap", key: "full_name" },
@@ -24,77 +26,149 @@ const PARTICIPANT_EXPORT_COLUMNS = [
 ];
 
 export default function ParticipantsPage() {
-  const [participants, setParticipants] = useState([]);
   const [search, setSearch] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [submittedSearch, setSubmittedSearch] = useState("");
 
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [viewingId, setViewingId] = useState(null);
 
+  const [filters, setFilters] = useState({
+    name: "",
+    stambuk: "",
+    ktb_has: "",
+    want_join_ktb: "",
+    marriage_status: "",
+  });
+
   const currentUser = getUser();
 
-  async function loadParticipants(searchValue = search) {
-    try {
-      setLoading(true);
-      setError(null);
+  const query = submittedSearch.trim()
+    ? `?search=${encodeURIComponent(submittedSearch.trim())}`
+    : "";
+  const swrKey = `/admin/participants${query}`;
+  const { data: result, isLoading } = useSWR(swrKey, fetcher);
 
-      const query = searchValue.trim()
-        ? `?search=${encodeURIComponent(searchValue.trim())}`
-        : "";
-
-      const result = await apiClient.get(`/admin/participants${query}`, true);
-
-      if (result.code === "network_error") {
-        setError(
-          "You're offline. Check your internet connection and try again.",
-        );
-        setParticipants([]);
-        return;
-      }
-
-      setParticipants(result.data || []);
-    } catch (err) {
-      console.error(err);
-      setError("Failed to load participants.");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    loadParticipants("");
-  }, []);
+  const offline = result?.code === "network_error";
+  const error = offline
+    ? "You're offline. Check your internet connection and try again."
+    : result && !result.data
+      ? "Failed to load participants."
+      : null;
+  const participants = result?.data || [];
 
   async function handleSearch(e) {
     e.preventDefault();
-    await loadParticipants(search);
+    setSubmittedSearch(search);
   }
 
-  async function handleSearchChange(value) {
-    setSearch(value);
+  const filteredParticipants = participants.filter((participant) => {
+    const name = (participant.full_name || "").toLowerCase();
+    const stambuk = (participant.stambuk || "").toLowerCase();
 
+    // Text filters
+    if (
+      filters.name.trim() &&
+      !name.includes(filters.name.trim().toLowerCase())
+    ) {
+      return false;
+    }
+
+    if (
+      filters.stambuk.trim() &&
+      !stambuk.includes(filters.stambuk.trim().toLowerCase())
+    ) {
+      return false;
+    }
+
+    // KTB filter
+    if (filters.ktb_has === "true" && participant.ktb_has !== true) {
+      return false;
+    }
+
+    if (filters.ktb_has === "false" && participant.ktb_has !== false) {
+      return false;
+    }
+
+    if (
+      filters.ktb_has === "null" &&
+      participant.ktb_has !== null &&
+      participant.ktb_has !== undefined
+    ) {
+      return false;
+    }
+
+    // Want Join KTB filter
+    if (
+      filters.want_join_ktb === "true" &&
+      participant.want_join_ktb !== true
+    ) {
+      return false;
+    }
+
+    if (
+      filters.want_join_ktb === "false" &&
+      participant.want_join_ktb !== false
+    ) {
+      return false;
+    }
+
+    if (
+      filters.want_join_ktb === "null" &&
+      participant.want_join_ktb !== null &&
+      participant.want_join_ktb !== undefined
+    ) {
+      return false;
+    }
+
+    // Marriage status
+    if (
+      filters.marriage_status === "single" &&
+      participant.marriage_status !== "single"
+    ) {
+      return false;
+    }
+
+    if (
+      filters.marriage_status === "married" &&
+      participant.marriage_status !== "married"
+    ) {
+      return false;
+    }
+
+    if (
+      filters.marriage_status === "null" &&
+      participant.marriage_status !== null &&
+      participant.marriage_status !== undefined
+    ) {
+      return false;
+    }
+
+    return true;
+  });
+
+  function handleSearchChange(value) {
+    setSearch(value);
     if (!value.trim()) {
-      await loadParticipants("");
+      setSubmittedSearch("");
     }
   }
+
+  const [actionError, setActionError] = useState(null);
 
   async function handleDelete(id) {
     const confirmed = window.confirm(
       "Are you sure you want to delete this participant?",
     );
-
     if (!confirmed) return;
 
     try {
-      setError(null);
-
+      setActionError(null);
       await apiClient.delete(`/admin/participants/${id}`, true);
-      await loadParticipants();
+      await mutate(swrKey);
     } catch (err) {
       console.error(err);
-      setError("Failed to delete participant.");
+      setActionError("Failed to delete participant.");
     }
   }
 
@@ -113,10 +187,10 @@ export default function ParticipantsPage() {
       true,
     );
     if (!result.data) {
-      setError(result.message || "Failed to update role.");
+      setActionError(result.message || "Failed to update role.");
       return;
     }
-    await loadParticipants();
+    await mutate(swrKey);
   }
 
   async function handleExport() {
@@ -130,41 +204,38 @@ export default function ParticipantsPage() {
       <div className="mx-auto max-w-6xl">
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">Participants</h1>
+            <h1 className="text-2xl font-bold text-slate-900">
+              Database Anggota
+            </h1>
 
             <p className="mt-1 text-sm text-slate-500">
-              Manage registered participants.
+              Kelola Database Anggota
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={() => setShowAddForm(true)}
-            className="w-full shrink-0 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 sm:w-auto"
-          >
-            + Add Participant
-          </button>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <button
+              type="button"
+              onClick={() => setShowAddForm(true)}
+              className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
+            >
+              + Tambah Anggota
+            </button>
 
-          <button
-            onClick={handleExport}
-            className="w-full shrink-0 rounded-lg bg-green-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-green-700 sm:w-auto"
-          >
-            Export CSV
-          </button>
+            <button
+              type="button"
+              onClick={handleExport}
+              className="rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+            >
+              Export CSV
+            </button>
+          </div>
         </div>
 
         {/* Error */}
         {error && (
-          <div className="mb-4 flex items-center justify-between rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            <span>{error}</span>
-
-            <button
-              type="button"
-              onClick={() => setError(null)}
-              className="ml-4 font-semibold hover:text-red-900"
-            >
-              ×
-            </button>
+          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {error}
           </div>
         )}
 
@@ -173,7 +244,7 @@ export default function ParticipantsPage() {
           <div className="relative flex-1">
             <input
               type="search"
-              placeholder="Search participants..."
+              placeholder="Cari Anggota..."
               value={search}
               onChange={(e) => handleSearchChange(e.target.value)}
               className="w-full rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
@@ -184,121 +255,214 @@ export default function ParticipantsPage() {
             type="submit"
             className="rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
           >
-            Search
+            Cari
           </button>
         </form>
 
-        {/* Content */}
-        {loading ? (
-          <div className="rounded-xl border border-slate-200 bg-white p-10 text-center">
-            <div className="mx-auto mb-3 h-6 w-6 animate-spin rounded-full border-2 border-slate-200 border-t-blue-600" />
+        {/* Filters */}
+        <div className="mb-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="mb-3 flex items-center justify-between">
+            <div>
+              <h2 className="text-sm font-semibold text-slate-800">
+                Filter Pencarian
+              </h2>
 
-            <p className="text-sm text-slate-500">Loading participants...</p>
+              <p className="mt-0.5 text-xs text-slate-400">
+                Gunakan beberapa filter untuk mempersempit daftar.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() =>
+                setFilters({
+                  name: "",
+                  stambuk: "",
+                  ktb_has: "",
+                  want_join_ktb: "",
+                  marriage_status: "",
+                })
+              }
+              className="text-xs font-medium text-slate-500 transition hover:text-blue-600"
+            >
+              Bersihkan filter
+            </button>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+            {/* Name */}
+            <FilterInput
+              label="Name"
+              placeholder="Cari nama..."
+              value={filters.name}
+              onChange={(value) =>
+                setFilters((prev) => ({
+                  ...prev,
+                  name: value,
+                }))
+              }
+            />
+
+            {/* Stambuk */}
+            <FilterInput
+              label="Stambuk"
+              placeholder="Cari stambuk..."
+              value={filters.stambuk}
+              onChange={(value) =>
+                setFilters((prev) => ({
+                  ...prev,
+                  stambuk: value,
+                }))
+              }
+            />
+
+            {/* KTB */}
+            <FilterSelect
+              label="Sudah KTB"
+              value={filters.ktb_has}
+              onChange={(value) =>
+                setFilters((prev) => ({
+                  ...prev,
+                  ktb_has: value,
+                }))
+              }
+              options={[
+                { value: "", label: "Semua" },
+                { value: "true", label: "Sudah" },
+                { value: "false", label: "Belum" },
+                { value: "null", label: "Tidak Diisi" },
+              ]}
+            />
+
+            {/* Want Join KTB */}
+            <FilterSelect
+              label="Ingin Bergabung dengan KTB"
+              value={filters.want_join_ktb}
+              onChange={(value) =>
+                setFilters((prev) => ({
+                  ...prev,
+                  want_join_ktb: value,
+                }))
+              }
+              options={[
+                { value: "", label: "Semua" },
+                { value: "true", label: "Bersedia" },
+                { value: "false", label: "Tidak Bersedia" },
+                { value: "null", label: "Tidak Diisi" },
+              ]}
+            />
+
+            {/* Marriage Status */}
+            <FilterSelect
+              label="Status"
+              value={filters.marriage_status}
+              onChange={(value) =>
+                setFilters((prev) => ({
+                  ...prev,
+                  marriage_status: value,
+                }))
+              }
+              options={[
+                { value: "", label: "Semua" },
+                { value: "single", label: "Single" },
+                { value: "married", label: "Menikah" },
+                { value: "null", label: "Tidak Diisi" },
+              ]}
+            />
+          </div>
+        </div>
+
+        {/* Content */}
+        {isLoading ? (
+          <div className="rounded-xl border border-slate-200 bg-white px-6 py-14 text-center">
+            <p className="text-sm text-slate-500">Memuat Anggota...</p>
           </div>
         ) : participants.length === 0 ? (
           <div className="rounded-xl border border-dashed border-slate-300 bg-white px-6 py-14 text-center">
+            <h2 className="font-semibold text-slate-900">Tidak Ada Anggota</h2>
+
+            <p className="mt-1 text-sm text-slate-500">
+              Belum ada anggota dalam database.
+            </p>
+          </div>
+        ) : filteredParticipants.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-slate-300 bg-white px-6 py-14 text-center">
             <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-xl">
-              👤
+              🔍
             </div>
 
             <h2 className="font-semibold text-slate-900">
-              {search.trim() ? "No participants found" : "No participants yet"}
+              Tidak Ada Anggota yang Cocok
             </h2>
 
             <p className="mt-1 text-sm text-slate-500">
-              {search.trim()
-                ? "Try a different search term."
-                : "Add your first participant to get started."}
+              Coba sesuaikan atau hapus filter Anda.
             </p>
 
-            {!search && (
-              <button
-                type="button"
-                onClick={() => setShowAddForm(true)}
-                className="mt-5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
-              >
-                Add Participant
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={() =>
+                setFilters({
+                  name: "",
+                  stambuk: "",
+                  ktb_has: "",
+                  want_join_ktb: "",
+                  marriage_status: "",
+                })
+              }
+              className="mt-5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
+            >
+              Hapus Filter
+            </button>
           </div>
         ) : (
           <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-            {loading ? (
-              <div className="rounded-xl border border-slate-200 bg-white p-10 text-center">
-                <div className="mx-auto mb-3 h-6 w-6 animate-spin rounded-full border-2 border-slate-200 border-t-blue-600" />
-                <p className="text-sm text-slate-500">
-                  Loading participants...
-                </p>
-              </div>
-            ) : participants.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-slate-300 bg-white px-6 py-14 text-center">
-                <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-xl">
-                  👤
-                </div>
-                <h2 className="font-semibold text-slate-900">
-                  {search.trim()
-                    ? "No participants found"
-                    : "No participants yet"}
-                </h2>
-                <p className="mt-1 text-sm text-slate-500">
-                  {search.trim()
-                    ? "Try a different search term."
-                    : "Add your first participant to get started."}
-                </p>
-                {!search && (
-                  <button
-                    type="button"
-                    onClick={() => setShowAddForm(true)}
-                    className="mt-5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
-                  >
-                    Add Participant
-                  </button>
-                )}
-              </div>
-            ) : (
-              <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-                <div className="overflow-x-auto">
-                  <table className="w-full min-w-[900px] text-left">
-                    <thead className="border-b border-slate-200 bg-slate-50">
-                      <tr>
-                        <th className="px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
-                          Participant
-                        </th>
-                        <th className="px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
-                          Phone
-                        </th>
-                        <th className="px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
-                          University
-                        </th>
-                        <th className="px-4 py-3.5 text-center text-xs font-semibold uppercase tracking-wider text-slate-500">
-                          Events
-                        </th>
-                        <th className="px-4 py-3.5 text-center text-xs font-semibold uppercase tracking-wider text-slate-500">
-                          Role
-                        </th>
-                        <th className="px-6 py-3.5 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">
-                          Actions
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {participants.map((participant, index) => (
-                        <ParticipantTableRow
-                          key={participant.id}
-                          participant={participant}
-                          isLast={index === participants.length - 1}
-                          currentUserId={currentUser?.id}
-                          onView={() => setViewingId(participant.id)}
-                          onEdit={() => setEditingId(participant.id)}
-                          onDelete={() => handleDelete(participant.id)}
-                          onToggleAdmin={() => handleToggleAdmin(participant)}
-                        />
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[850px] table-fixed text-left">
+                <thead className="border-b border-slate-200 bg-slate-50">
+                  <tr>
+                    <th className="w-[360px] px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Anggota
+                    </th>
+
+                    <th className="w-[90px] whitespace-nowrap px-4 py-3.5 text-center text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Sudah KTB
+                    </th>
+
+                    <th className="w-[110px] whitespace-nowrap px-4 py-3.5 text-center text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Ingin KTB
+                    </th>
+
+                    <th className="w-[130px] whitespace-nowrap px-4 py-3.5 text-center text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Pelayanan
+                    </th>
+
+                    <th className="w-[100px] whitespace-nowrap px-4 py-3.5 text-center text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Kehadiran
+                    </th>
+
+                    <th className="w-[100px] whitespace-nowrap px-4 py-3.5 text-center text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Role
+                    </th>
+
+                    <th className="w-[100px] whitespace-nowrap border-l border-slate-200 px-5 py-3.5 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {filteredParticipants.map((participant, index) => (
+                    <ParticipantTableRow
+                      key={participant.id}
+                      participant={participant}
+                      isLast={index === filteredParticipants.length - 1}
+                      onView={() => setViewingId(participant.id)}
+                    />
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>
@@ -309,7 +473,7 @@ export default function ParticipantsPage() {
           onClose={() => setShowAddForm(false)}
           onCreated={async () => {
             setShowAddForm(false);
-            await loadParticipants();
+            await mutate(swrKey);
           }}
         />
       )}
@@ -321,7 +485,7 @@ export default function ParticipantsPage() {
           onClose={() => setEditingId(null)}
           onSaved={async () => {
             setEditingId(null);
-            await loadParticipants();
+            await mutate(swrKey);
           }}
         />
       )}
@@ -331,115 +495,196 @@ export default function ParticipantsPage() {
         <ViewParticipantModal
           id={viewingId}
           onClose={() => setViewingId(null)}
+          currentUserId={currentUser?.id}
+          onEdit={() => {
+            setViewingId(null);
+            setEditingId(viewingId);
+          }}
+          onDelete={async () => {
+            await handleDelete(viewingId);
+            setViewingId(null);
+          }}
+          onToggleAdmin={async (participant) => {
+            await handleToggleAdmin(participant);
+            setViewingId(null);
+          }}
         />
       )}
     </div>
   );
 }
 
-function ParticipantTableRow({
-  participant,
-  isLast,
-  currentUserId,
-  onView,
-  onEdit,
-  onDelete,
-  onToggleAdmin,
-}) {
+function ParticipantTableRow({ participant, isLast, onView }) {
   const eventCount = participant.events_attended ?? 0;
-  const isSelf = participant.id === currentUserId;
   const isAdmin = participant.role === "admin";
+
+  const ktbLabel =
+    participant.ktb_has === true
+      ? "Sudah"
+      : participant.ktb_has === false
+        ? "Belum"
+        : "-";
+
+  const joinKtbLabel =
+    participant.want_join_ktb === true
+      ? "Bersedia"
+      : participant.want_join_ktb === false
+        ? "Tidak"
+        : "-";
+
+  const serveAsLabel = Array.isArray(participant.serve_as)
+    ? participant.serve_as
+        .map((item) =>
+          item === "Lainnya" && participant.serve_as_other
+            ? participant.serve_as_other
+            : item,
+        )
+        .join(", ")
+    : "-";
+
   return (
     <tr
-      className={`transition hover:bg-slate-50 ${!isLast ? "border-b border-slate-200" : ""}`}
+      className={`transition-colors hover:bg-slate-50 ${
+        !isLast ? "border-b border-slate-200" : ""
+      }`}
     >
       {/* Participant */}
       <td className="px-6 py-4">
-        <div className="flex items-center gap-3">
+        <div className="flex min-w-0 items-center gap-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-50 text-sm font-bold text-blue-700">
             {getInitials(participant.full_name)}
           </div>
+
           <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-slate-900">
-              {participant.full_name || "-"}
-            </p>
+            <div className="flex min-w-0 items-baseline gap-1.5">
+              <p className="truncate text-sm font-semibold text-slate-900">
+                {participant.full_name || "-"}
+              </p>
+
+              <span className="shrink-0 text-xs text-slate-400">
+                ({getUniversityInitials(participant.university || "-")} -{" "}
+                {participant.stambuk || "-"})
+              </span>
+            </div>
+
             <p className="mt-0.5 truncate text-xs text-slate-500">
               @{participant.username || "-"}
             </p>
-            {participant.email && (
-              <p className="mt-0.5 truncate text-xs text-slate-400">
-                {participant.email}
-              </p>
-            )}
+
+            <div className="mt-1 flex min-w-0 items-center gap-2 text-xs text-slate-400">
+              {participant.email && (
+                <>
+                  <span className="truncate">{participant.email}</span>
+                  <span className="shrink-0 text-slate-300">•</span>
+                </>
+              )}
+
+              <span className="truncate">{participant.phone || "-"}</span>
+            </div>
+
+            <div className="mt-1 flex min-w-0 items-center gap-2 text-xs text-slate-400">
+              {`Status: ${
+                participant.marriage_status === "single"
+                  ? "Single"
+                  : participant.marriage_status === "married"
+                    ? "Menikah"
+                    : "-"
+              }`}
+            </div>
           </div>
         </div>
       </td>
-      {/* Phone */}
-      <td className="px-4 py-4">
-        <span className="text-sm text-slate-600">
-          {participant.phone || "-"}
+
+      {/* KTB */}
+      <td className="whitespace-nowrap px-5 py-4 text-center">
+        <span
+          className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${
+            participant.ktb_has === true
+              ? "bg-green-50 text-green-700"
+              : participant.ktb_has === false
+                ? "bg-slate-100 text-slate-500"
+                : "bg-slate-50 text-slate-400"
+          }`}
+        >
+          {ktbLabel}
         </span>
       </td>
-      {/* University */}
-      <td className="max-w-[220px] px-4 py-4">
-        <span className="block truncate text-sm text-slate-600">
-          {participant.university || "-"}
+
+      {/* Join KTB */}
+      <td className="whitespace-nowrap px-5 py-4 text-center">
+        <span
+          className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${
+            participant.want_join_ktb === true
+              ? "bg-green-50 text-green-700"
+              : participant.want_join_ktb === false
+                ? "bg-slate-100 text-slate-500"
+                : "bg-slate-50 text-slate-400"
+          }`}
+        >
+          {joinKtbLabel}
         </span>
       </td>
+
+      {/* Serve As */}
+      <td className="whitespace-wrap px-5 py-4 text-center">
+        <div className="flex flex-wrap justify-center gap-1.5">
+          {serveAsLabel
+            .split(",")
+            .map((role) => role.trim())
+            .filter(Boolean)
+            .map((role) => (
+              <span
+                key={role}
+                className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${
+                  role === "Pemusik"
+                    ? "bg-blue-100 text-blue-700"
+                    : role === "Singer"
+                      ? "bg-purple-100 text-purple-700"
+                      : "bg-gray-100 text-gray-700"
+                }`}
+              >
+                {role}
+              </span>
+            ))}
+        </div>
+      </td>
+
       {/* Events */}
-      <td className="px-4 py-4 text-center">
-        <span className="font-semibold text-slate-800">{eventCount}</span>
-        <span className="ml-1 text-xs text-slate-400">
-          {eventCount === 1 ? "event" : "events"}
+      <td className="whitespace-nowrap px-5 py-4 text-center">
+        <div className="flex items-baseline justify-center gap-1">
+          <span className="text-sm font-semibold text-slate-800">
+            {eventCount}
+          </span>
+
+          <span className="text-xs text-slate-400">
+            {eventCount === 1 ? "event" : "events"}
+          </span>
+        </div>
+      </td>
+
+      {/* Role */}
+      <td className="whitespace-nowrap px-5 py-4 text-center">
+        <span
+          className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${
+            isAdmin
+              ? "bg-blue-50 font-semibold text-blue-700"
+              : "bg-slate-100 text-slate-500"
+          }`}
+        >
+          {isAdmin ? "Admin" : "Attendee"}
         </span>
       </td>
-      {/* Role */}
-      <td className="px-4 py-4 text-center">
-        {isAdmin ? (
-          <span className="inline-flex rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700">
-            Admin
-          </span>
-        ) : (
-          <span className="inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-500">
-            Attendee
-          </span>
-        )}
-      </td>
+
       {/* Actions */}
-      <td className="px-6 py-4">
-        <div className="flex justify-end gap-2">
+      <td className="border-l border-slate-100 px-6 py-4">
+        <div className="flex justify-end">
           <button
             type="button"
             onClick={onView}
-            className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-medium text-slate-700 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
+            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
           >
             View
           </button>
-          <button
-            type="button"
-            onClick={onEdit}
-            className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-medium text-slate-700 transition hover:bg-slate-100"
-          >
-            Edit
-          </button>
-          {!isSelf && (
-            <button
-              type="button"
-              onClick={onToggleAdmin}
-              className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-medium text-slate-700 transition hover:bg-slate-100"
-            >
-              {isAdmin ? "Revoke Admin" : "Make Admin"}
-            </button>
-          )}
-          {!isSelf && !isAdmin && (
-            <button
-              type="button"
-              onClick={onDelete}
-              className="rounded-lg border border-red-200 px-3 py-2 text-xs font-medium text-red-600 transition hover:bg-red-50"
-            >
-              Delete
-            </button>
-          )}
         </div>
       </td>
     </tr>
@@ -453,6 +698,17 @@ function getInitials(name) {
     .trim()
     .split(/\s+/)
     .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase();
+}
+
+function getUniversityInitials(name) {
+  if (!name) return "?";
+
+  return name
+    .trim()
+    .split(/\s+/)
     .map((part) => part[0])
     .join("")
     .toUpperCase();
@@ -540,8 +796,8 @@ function AddParticipantModal({ onClose, onCreated }) {
 
   return (
     <Modal
-      title="Add Participant"
-      description="Create a new participant account."
+      title="Tambah Anggota Baru"
+      description="Buat akun anggota baru."
       onClose={onClose}
     >
       <form onSubmit={handleSubmit}>
@@ -550,7 +806,7 @@ function AddParticipantModal({ onClose, onCreated }) {
             label="Full Name"
             value={fullName}
             onChange={setFullName}
-            placeholder="e.g. Alwi Okta Jeremy"
+            placeholder="Masukkan Nama Lengkap"
             required
           />
 
@@ -558,12 +814,12 @@ function AddParticipantModal({ onClose, onCreated }) {
             label="Username"
             value={username}
             onChange={setUsername}
-            placeholder="e.g. alwi"
+            placeholder="Masukkan Username"
             required
           />
 
           <FormField
-            label="Phone"
+            label="Nomor Telepon"
             value={phone}
             onChange={setPhone}
             placeholder="e.g. 08123456789"
@@ -575,8 +831,9 @@ function AddParticipantModal({ onClose, onCreated }) {
             label="Email"
             value={email}
             onChange={setEmail}
-            placeholder="e.g. alwi@example.com"
+            placeholder="e.g. person@example.com"
             type="email"
+            required
           />
 
           <FormField
@@ -589,8 +846,8 @@ function AddParticipantModal({ onClose, onCreated }) {
           />
 
           <p className="text-xs text-slate-400">
-            KTB, marriage status, and service role can be set after the
-            participant is created, via Edit.
+            Sudah KTB, status pernikahan, dan peran layanan dapat diatur setelah
+            anggota dibuat, melalui Edit.
           </p>
 
           {error && (
@@ -602,7 +859,7 @@ function AddParticipantModal({ onClose, onCreated }) {
 
         <ModalFooter
           onClose={onClose}
-          submitText="Create Participant"
+          submitText="Buat Anggota"
           loading={saving}
         />
       </form>
@@ -633,6 +890,46 @@ function FormField({
         onChange={(e) => onChange(e.target.value)}
         className="w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
       />
+    </label>
+  );
+}
+
+function FilterInput({ label, value, onChange, placeholder }) {
+  return (
+    <label className="block">
+      <span className="mb-1.5 block text-xs font-medium text-slate-500">
+        {label}
+      </span>
+
+      <input
+        type="text"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+      />
+    </label>
+  );
+}
+
+function FilterSelect({ label, value, onChange, options }) {
+  return (
+    <label className="block">
+      <span className="mb-1.5 block text-xs font-medium text-slate-500">
+        {label}
+      </span>
+
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+      >
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
     </label>
   );
 }
@@ -675,7 +972,7 @@ function ModalFooter({
         disabled={loading}
         className="rounded-lg px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-100 disabled:opacity-50"
       >
-        {hideSubmit ? "Close" : "Cancel"}
+        {hideSubmit ? "Tutup" : "Batal"}
       </button>
 
       {!hideSubmit && (
@@ -684,7 +981,7 @@ function ModalFooter({
           disabled={loading}
           className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {loading ? "Saving..." : submitText}
+          {loading ? "Menyimpan..." : submitText}
         </button>
       )}
     </div>
@@ -758,7 +1055,7 @@ function EditParticipantModal({ id, onClose, onSaved }) {
         email: form.email.trim(),
         university: form.university?.trim() || "",
         serve_as: form.serve_as?.trim() || "",
-        serve_as_more: form.serve_as_more?.trim() || "",
+        serve_as_other: form.serve_as_other?.trim() || "",
         ktb_has: form.ktb_has,
         want_join_ktb: form.want_join_ktb,
       };
@@ -803,7 +1100,7 @@ function EditParticipantModal({ id, onClose, onSaved }) {
           ) : (
             <div className="flex items-center gap-3 text-sm text-slate-500">
               <div className="h-5 w-5 animate-spin rounded-full border-2 border-slate-200 border-t-blue-600" />
-              Loading participant...
+              Memuat anggota...
             </div>
           )}
         </div>
@@ -813,8 +1110,8 @@ function EditParticipantModal({ id, onClose, onSaved }) {
 
   return (
     <Modal
-      title="Edit Participant"
-      description="Update the participant's information."
+      title="Edit Anggota"
+      description="Update data anggota."
       onClose={onClose}
     >
       <form onSubmit={handleSubmit}>
@@ -850,20 +1147,17 @@ function EditParticipantModal({ id, onClose, onSaved }) {
             onChange={(value) => setForm({ ...form, email: value })}
             placeholder="Email address"
             type="email"
+            required
           />
 
           <FormField
-            label="University"
+            label="Asal Sekolah / Universitas"
             value={form.university || ""}
             onChange={(value) => setForm({ ...form, university: value })}
-            placeholder="University"
+            placeholder="Asal Sekolah / Universitas"
           />
 
           <div className="border-t border-slate-100 pt-4">
-            <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-400">
-              KTB &amp; Ministry
-            </p>
-
             <div className="space-y-4">
               <SelectField
                 label="Sudah Punya KTB"
@@ -896,33 +1190,6 @@ function EditParticipantModal({ id, onClose, onSaved }) {
                   { value: "false", label: "No" },
                 ]}
               />
-
-              <FormField
-                label="Melayani Sebagai"
-                value={form.serve_as || ""}
-                onChange={(value) => setForm({ ...form, serve_as: value })}
-                placeholder="e.g. Worship, Usher, Multimedia"
-              />
-
-              <FormField
-                label="Melayani Sebagai (Lainnya)"
-                value={form.serve_as_more || ""}
-                onChange={(value) => setForm({ ...form, serve_as_more: value })}
-                placeholder="e.g. Koordinator, Dokumentasi"
-              />
-
-              <SelectField
-                label="Status Pernikahan"
-                value={form.marriage_status || ""}
-                onChange={(value) =>
-                  setForm({ ...form, marriage_status: value })
-                }
-                options={[
-                  { value: "", label: "Not set" },
-                  { value: "single", label: "Single" },
-                  { value: "married", label: "Married" },
-                ]}
-              />
             </div>
           </div>
 
@@ -935,7 +1202,7 @@ function EditParticipantModal({ id, onClose, onSaved }) {
 
         <ModalFooter
           onClose={onClose}
-          submitText="Save Changes"
+          submitText="Simpan Perubahan"
           loading={saving}
         />
       </form>
@@ -943,7 +1210,14 @@ function EditParticipantModal({ id, onClose, onSaved }) {
   );
 }
 
-function ViewParticipantModal({ id, onClose }) {
+function ViewParticipantModal({
+  id,
+  onClose,
+  currentUserId,
+  onEdit,
+  onDelete,
+  onToggleAdmin,
+}) {
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
 
@@ -992,7 +1266,7 @@ function ViewParticipantModal({ id, onClose }) {
           ) : (
             <div className="flex items-center gap-3 text-sm text-slate-500">
               <div className="h-5 w-5 animate-spin rounded-full border-2 border-slate-200 border-t-blue-600" />
-              Loading participant...
+              Memuat anggota...
             </div>
           )}
         </div>
@@ -1001,11 +1275,13 @@ function ViewParticipantModal({ id, onClose }) {
   }
 
   const eventCount = data.events?.filter((event) => event.attended).length ?? 0;
+  const isSelf = data.id === currentUserId;
+  const isAdmin = data.role === "admin";
 
   return (
     <Modal
-      title="Participant Details"
-      description="View participant information and event attendance."
+      title="Detail Anggota"
+      description="Lihat informasi anggota dan kehadiran acara."
       onClose={onClose}
     >
       <div className="max-h-[70vh] overflow-y-auto">
@@ -1033,7 +1309,7 @@ function ViewParticipantModal({ id, onClose }) {
         {/* Information */}
         <div className="px-6 py-5">
           <h3 className="mb-4 text-xs font-semibold uppercase tracking-wider text-slate-400">
-            Contact Information
+            Informasi Kontak
           </h3>
 
           <div className="grid gap-4 sm:grid-cols-2">
@@ -1065,10 +1341,18 @@ function ViewParticipantModal({ id, onClose }) {
             />
 
             <InfoItem
-              label="Melayani Sebagai"
-              value={[data.serve_as, data.serve_as_more]
-                .filter(Boolean)
-                .join(", ")}
+              label="Ingin Melayani Sebagai"
+              value={
+                Array.isArray(data.serve_as)
+                  ? data.serve_as
+                      .map((item) =>
+                        item === "Lainnya" && data.serve_as_other
+                          ? data.serve_as_other
+                          : item,
+                      )
+                      .join(", ")
+                  : "-"
+              }
             />
 
             <InfoItem
@@ -1084,7 +1368,7 @@ function ViewParticipantModal({ id, onClose }) {
         <div className="px-6 py-5">
           <div className="mb-4 flex items-center justify-between">
             <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-              Event Attendance
+              Kehadiran Event
             </h3>
 
             <span className="text-sm font-semibold text-slate-700">
@@ -1109,11 +1393,11 @@ function ViewParticipantModal({ id, onClose }) {
 
                   {event.attended ? (
                     <span className="shrink-0 rounded-full bg-green-50 px-2.5 py-1 text-xs font-semibold text-green-700">
-                      ✓ Attended
+                      ✓ Hadir
                     </span>
                   ) : (
                     <span className="shrink-0 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-500">
-                      Not attended
+                      Tidak Hadir
                     </span>
                   )}
                 </div>
@@ -1122,14 +1406,52 @@ function ViewParticipantModal({ id, onClose }) {
           ) : (
             <div className="rounded-lg border border-dashed border-slate-200 px-4 py-6 text-center">
               <p className="text-sm text-slate-500">
-                No event attendance records.
+                Tidak ada data kehadiran event untuk anggota ini.
               </p>
             </div>
           )}
         </div>
       </div>
 
-      <ModalFooter onClose={onClose} submitText="Close" hideSubmit />
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 px-6 py-4">
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={onEdit}
+            className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-medium text-slate-700 transition hover:bg-slate-100"
+          >
+            Edit
+          </button>
+
+          {!isSelf && (
+            <button
+              type="button"
+              onClick={() => onToggleAdmin(data)}
+              className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-medium text-slate-700 transition hover:bg-slate-100"
+            >
+              {isAdmin ? "Revoke Admin" : "Make Admin"}
+            </button>
+          )}
+
+          {!isSelf && !isAdmin && (
+            <button
+              type="button"
+              onClick={onDelete}
+              className="rounded-lg border border-red-200 px-3 py-2 text-xs font-medium text-red-600 transition hover:bg-red-50"
+            >
+              Hapus
+            </button>
+          )}
+        </div>
+
+        <button
+          type="button"
+          onClick={onClose}
+          className="rounded-lg px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-100"
+        >
+          Tutup
+        </button>
+      </div>
     </Modal>
   );
 }

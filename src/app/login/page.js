@@ -68,19 +68,19 @@ export default function LoginPage() {
           </div>
 
           <h1 className="text-2xl font-bold text-slate-900">
-            Paksu Attendance App
+            Paksu Attendance
           </h1>
 
-          <p className="mt-1 text-sm text-slate-500">Admin Dashboard</p>
+          <p className="mt-1 text-sm text-slate-500">Dashboard Admin</p>
         </div>
 
         {/* Login Card */}
         <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
           <div className="border-b border-slate-200 px-6 py-5 sm:px-8">
-            <h2 className="text-lg font-bold text-slate-900">Halo</h2>
+            <h2 className="text-lg font-bold text-slate-900">Haloo!</h2>
 
             <p className="mt-1 text-sm text-slate-500">
-              Sign in to access the admin dashboard.
+              Sign in untuk mengakses dashboard admin.
             </p>
           </div>
 
@@ -92,13 +92,13 @@ export default function LoginPage() {
                   htmlFor="identifier"
                   className="mb-1.5 block text-sm font-medium text-slate-700"
                 >
-                  Username, Email or Phone
+                  Username, Email atau Nomor Telepon
                 </label>
 
                 <input
                   id="identifier"
                   type="text"
-                  placeholder="Enter your username, email or phone"
+                  placeholder="Masukkan your username, email atau nomor telepon"
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value)}
                   autoComplete="username"
@@ -119,7 +119,7 @@ export default function LoginPage() {
                 <input
                   id="password"
                   type="password"
-                  placeholder="Enter your password"
+                  placeholder="Masukkan password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   autoComplete="current-password"

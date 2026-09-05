@@ -1,56 +1,33 @@
 "use client";
 
+import useSWR, { mutate } from "swr";
 import { useEffect, useState } from "react";
 import { apiClient } from "@/lib/apiClient";
+import { fetcher } from "@/lib/apiClient";
 import { formatWib, toWibInputValue, fromWibInputValue } from "@/lib/dateUtils";
 import { OfflineBanner } from "@/components/OfflineBanner";
 import { exportToCsv } from "@/lib/csvExport";
 
 const EVENT_ATTENDANCE_EXPORT_COLUMNS = [
   { label: "Full Name", key: "full_name" },
-  { label: "University", key: "university" },
-  { label: "Attended", format: (row) => (row.attended ? "Yes" : "No") },
-  { label: "Checked In At", key: "checked_in_at" },
+  { label: "Asal Universitas", key: "university" },
+  { label: "Kehadiran", format: (row) => (row.attended ? "Yes" : "No") },
+  { label: "Check-In Pukul", key: "checked_in_at" },
 ];
 
 export default function EventsPage() {
-  const [events, setEvents] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [offline, setOffline] = useState(false);
+  const { data: result, isLoading } = useSWR("/admin/events", fetcher);
+  const events = result?.data || [];
+  const offline = result?.code === "network_error";
 
   const [showAddForm, setShowAddForm] = useState(false);
-  const [editingId, setEditingId] = useState(null);
+  const [editingEventId, setEditingEventId] = useState(null);
   const [viewingAttendeesId, setViewingAttendeesId] = useState(null);
 
-  async function loadEvents() {
-    setLoading(true);
-    const result = await apiClient.get("/admin/events", true);
-    setOffline(result.code === "network_error");
-    setEvents(result.data || []);
-    setLoading(false);
-  }
-
-  useEffect(() => {
-    loadEvents();
-  }, []);
-
   async function handleDelete(id) {
-    const confirmed = window.confirm(
-      "Are you sure you want to delete this event?",
-    );
-
-    if (!confirmed) return;
-
-    try {
-      setError(null);
-
-      await apiClient.delete(`/admin/events/${id}`, true);
-      await loadEvents();
-    } catch (err) {
-      console.error(err);
-      setError("Failed to delete event.");
-    }
+    if (!confirm("Delete this event?")) return;
+    await apiClient.delete(`/admin/events/${id}`, true);
+    mutate("/admin/events"); // tell SWR this key is stale, refetch it
   }
 
   return (
@@ -59,10 +36,10 @@ export default function EventsPage() {
         {/* Header */}
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">Events</h1>
+            <h1 className="text-2xl font-bold text-slate-900">Data Kegiatan</h1>
 
             <p className="mt-1 text-sm text-slate-500">
-              Manage your events and attendance.
+              Kelola data kegiatan dan catatan kehadiran anggota.
             </p>
           </div>
 
@@ -71,33 +48,18 @@ export default function EventsPage() {
             onClick={() => setShowAddForm(true)}
             className="w-full shrink-0 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 sm:w-auto"
           >
-            + Create Event
+            + Buat Kegiatan
           </button>
         </div>
 
         {offline && <OfflineBanner />}
 
-        {/* Error */}
-        {error && (
-          <div className="mb-4 flex items-center justify-between rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            <span>{error}</span>
-
-            <button
-              type="button"
-              onClick={() => setError(null)}
-              className="ml-4 font-semibold hover:text-red-900"
-            >
-              ×
-            </button>
-          </div>
-        )}
-
         {/* Content */}
-        {loading ? (
+        {isLoading ? (
           <div className="rounded-xl border border-slate-200 bg-white p-10 text-center">
             <div className="mx-auto mb-3 h-6 w-6 animate-spin rounded-full border-2 border-slate-200 border-t-blue-600" />
 
-            <p className="text-sm text-slate-500">Loading events...</p>
+            <p className="text-sm text-slate-500">Memuat kegiatan...</p>
           </div>
         ) : events.length === 0 ? (
           <div className="rounded-xl border border-dashed border-slate-300 bg-white px-6 py-14 text-center">
@@ -105,10 +67,10 @@ export default function EventsPage() {
               📅
             </div>
 
-            <h2 className="font-semibold text-slate-900">No events yet</h2>
+            <h2 className="font-semibold text-slate-900">Belum ada kegiatan</h2>
 
             <p className="mt-1 text-sm text-slate-500">
-              Create your first event to get started.
+              Buat kegiatan pertama Anda untuk memulai.
             </p>
 
             <button
@@ -116,21 +78,52 @@ export default function EventsPage() {
               onClick={() => setShowAddForm(true)}
               className="mt-5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
             >
-              Create Event
+              Buat Kegiatan
             </button>
           </div>
         ) : (
           <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-            {events.map((event, index) => (
-              <EventRow
-                key={event.id}
-                event={event}
-                isLast={index === events.length - 1}
-                onViewAttendees={() => setViewingAttendeesId(event.id)}
-                onEdit={() => setEditingId(event.id)}
-                onDelete={() => handleDelete(event.id)}
-              />
-            ))}
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[800px] text-left">
+                <thead className="border-b border-slate-200 bg-slate-50">
+                  <tr>
+                    <th className="px-6 py-3 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                      Kegiatan
+                    </th>
+
+                    <th className="px-6 py-3 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                      Tanggal & Waktu
+                    </th>
+
+                    <th className="px-6 py-3 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                      Lokasi
+                    </th>
+
+                    <th className="px-6 py-3 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                      Status
+                    </th>
+
+                    <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">
+                      Jumlah Kehadiran
+                    </th>
+
+                    <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">
+                      Action
+                    </th>
+                  </tr>
+                </thead>
+
+                <tbody className="divide-y divide-slate-200">
+                  {events.map((event) => (
+                    <EventTableRow
+                      key={event.id}
+                      event={event}
+                      onViewAttendees={() => setViewingAttendeesId(event.id)}
+                    />
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>
@@ -139,9 +132,9 @@ export default function EventsPage() {
       {showAddForm && (
         <CreateEventModal
           onClose={() => setShowAddForm(false)}
-          onCreated={async () => {
+          onCreated={() => {
             setShowAddForm(false);
-            await loadEvents();
+            mutate("/admin/events");
           }}
         />
       )}
@@ -151,17 +144,25 @@ export default function EventsPage() {
         <EventAttendeesModal
           id={viewingAttendeesId}
           onClose={() => setViewingAttendeesId(null)}
+          onEdit={() => {
+            setViewingAttendeesId(null);
+            setEditingEventId(viewingAttendeesId);
+          }}
+          onDelete={async () => {
+            await handleDelete(viewingAttendeesId);
+            setViewingAttendeesId(null);
+          }}
         />
       )}
 
       {/* Edit */}
-      {editingId && (
+      {editingEventId && (
         <EditEventModal
-          id={editingId}
-          onClose={() => setEditingId(null)}
-          onSaved={async () => {
-            setEditingId(null);
-            await loadEvents();
+          id={editingEventId}
+          onClose={() => setEditingEventId(null)}
+          onSaved={() => {
+            setEditingEventId(null);
+            mutate("/admin/events");
           }}
         />
       )}
@@ -169,80 +170,57 @@ export default function EventsPage() {
   );
 }
 
-function EventRow({ event, isLast, onViewAttendees, onEdit, onDelete }) {
+function EventTableRow({ event, onViewAttendees }) {
   const attendeeCount = event.attended_count ?? 0;
 
   return (
-    <div
-      className={`p-5 transition hover:bg-slate-50 md:px-6 ${
-        !isLast ? "border-b border-slate-200" : ""
-      }`}
-    >
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        {/* Event information */}
-        <div className="flex min-w-0 items-center gap-4">
-          {/* Calendar icon */}
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-blue-50 text-sm">
+    <tr className="transition hover:bg-slate-50">
+      {/* Event */}
+      <td className="px-6 py-4">
+        <div className="flex items-center gap-3">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-50 text-sm">
             📅
           </div>
 
           <div className="min-w-0">
-            <h2 className="truncate text-base font-semibold text-slate-900">
+            <p className="truncate text-sm font-semibold text-slate-800">
               {event.name || "-"}
-            </h2>
-
-            <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-400">
-              <span>{formatWib(event.event_datetime)}</span>
-
-              {event.location && (
-                <>
-                  <span>•</span>
-                  <span className="truncate">{event.location}</span>
-                </>
-              )}
-            </div>
+            </p>
           </div>
         </div>
+      </td>
 
-        {/* Right side */}
-        <div className="flex flex-wrap items-center gap-3 lg:justify-end">
-          <StatusBadge isActive={event.is_active} />
+      {/* Date & Time */}
+      <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-600">
+        {formatWib(event.event_datetime)}
+      </td>
 
-          <div className="mr-1 text-sm text-slate-500">
-            <span className="font-semibold text-slate-800">
-              {attendeeCount}
-            </span>{" "}
-            {attendeeCount === 1 ? "attendee" : "attendees"}
-          </div>
+      {/* Location */}
+      <td className="max-w-[200px] truncate px-6 py-4 text-sm text-slate-600">
+        {event.location || "-"}
+      </td>
 
-          <div className="hidden h-5 w-px bg-slate-200 lg:block" />
+      {/* Status */}
+      <td className="px-6 py-4">
+        <StatusBadge isActive={event.is_active} />
+      </td>
 
-          <button
-            type="button"
-            onClick={onViewAttendees}
-            className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
-          >
-            View Attendees
-          </button>
+      {/* Attendees */}
+      <td className="px-6 py-4 text-right text-sm text-slate-600">
+        <span className="font-semibold text-slate-800">{attendeeCount}</span>
+      </td>
 
-          <button
-            type="button"
-            onClick={onEdit}
-            className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
-          >
-            Edit
-          </button>
-
-          <button
-            type="button"
-            onClick={onDelete}
-            className="rounded-lg border border-red-200 px-3 py-2 text-sm font-medium text-red-600 transition hover:bg-red-50"
-          >
-            Delete
-          </button>
-        </div>
-      </div>
-    </div>
+      {/* Action */}
+      <td className="px-6 py-4 text-right">
+        <button
+          type="button"
+          onClick={onViewAttendees}
+          className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
+        >
+          View
+        </button>
+      </td>
+    </tr>
   );
 }
 
@@ -259,7 +237,7 @@ function StatusBadge({ isActive }) {
         }`}
       />
 
-      {isActive ? "Active" : "Inactive"}
+      {isActive ? "Aktif" : "Tidak Aktif"}
     </span>
   );
 }
@@ -306,6 +284,7 @@ function CreateEventModal({ onClose, onCreated }) {
   const [location, setLocation] = useState("");
   const [openMinutes, setOpenMinutes] = useState(120);
   const [closeMinutes, setCloseMinutes] = useState(60);
+  const [isActive, setIsActive] = useState(true);
 
   const [error, setError] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -332,6 +311,7 @@ function CreateEventModal({ onClose, onCreated }) {
           location: location.trim(),
           checkin_open_minutes: Number(openMinutes),
           checkin_close_minutes: Number(closeMinutes),
+          is_active: isActive,
         },
         true,
       );
@@ -352,22 +332,22 @@ function CreateEventModal({ onClose, onCreated }) {
 
   return (
     <Modal
-      title="Create Event"
-      description="Create a new event and configure its check-in window."
+      title="Buat Kegiatan Baru"
+      description="Buat kegiatan baru dan atur range waktu check-in-nya."
       onClose={onClose}
     >
       <form onSubmit={handleSubmit}>
         <div className="space-y-4 px-6 py-5">
           <FormField
-            label="Event Name"
+            label="Nama Kegiatan"
             value={name}
             onChange={setName}
-            placeholder="e.g. Annual Gathering 2026"
+            placeholder="Nama Kegiatan"
             required
           />
 
           <FormField
-            label="Event Date & Time"
+            label="Tanggal & Waktu Kegiatan"
             value={eventDatetime}
             onChange={setEventDatetime}
             type="datetime-local"
@@ -375,33 +355,43 @@ function CreateEventModal({ onClose, onCreated }) {
           />
 
           <FormField
-            label="Location"
+            label="Lokasi"
             value={location}
             onChange={setLocation}
-            placeholder="e.g. Jakarta Convention Center"
+            placeholder="Lokasi"
           />
 
           <FormField
-            label="Check-in opens"
+            label="Check-in dibuka"
             value={openMinutes / 60}
             onChange={(value) => setOpenMinutes(Number(value) * 60)}
             type="number"
             min="0"
             step="0.5"
-            suffix="hours before"
+            suffix="jam sebelum mulai"
             required
           />
 
           <FormField
-            label="Check-in closes"
+            label="Check-in ditutup"
             value={closeMinutes / 60}
             onChange={(value) => setCloseMinutes(Number(value) * 60)}
             type="number"
             min="0"
             step="0.5"
-            suffix="hours after start"
+            suffix="jam setelah mulai"
             required
           />
+
+          <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
+            <input
+              type="checkbox"
+              checked={isActive}
+              onChange={(e) => setIsActive(e.target.checked)}
+              className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+            />
+            Aktif
+          </label>
 
           {error && (
             <div className="rounded-lg bg-red-50 px-3 py-2.5 text-sm text-red-700">
@@ -420,91 +410,69 @@ function CreateEventModal({ onClose, onCreated }) {
   );
 }
 
-function EventAttendeesModal({ id, onClose }) {
-  const [data, setData] = useState(null);
+function EventAttendeesModal({ id, onClose, onEdit, onDelete }) {
   const [search, setSearch] = useState("");
+  const [submittedSearch, setSubmittedSearch] = useState("");
   const [marking, setMarking] = useState(null);
-  const [error, setError] = useState(null);
+  const [actionError, setActionError] = useState(null);
 
-  async function load(searchValue = search) {
-    try {
-      setError(null);
+  const trimmedSearch = submittedSearch.trim();
+  const query = trimmedSearch
+    ? `?search=${encodeURIComponent(trimmedSearch)}`
+    : "";
+  const swrKey = `/admin/dashboard/events/${id}/attendance/full${query}`;
 
-      const trimmedSearch = searchValue.trim();
+  const { data: result, mutate: refresh } = useSWR(swrKey, fetcher, {
+    refreshInterval: 10000,
+  });
 
-      const query = trimmedSearch
-        ? `?search=${encodeURIComponent(trimmedSearch)}`
-        : "";
+  const loadError =
+    result?.code === "network_error"
+      ? "You're offline. Check your internet connection and try again."
+      : result && !result.data
+        ? "Failed to load attendees."
+        : null;
 
-      const result = await apiClient.get(
-        `/admin/dashboard/events/${id}/attendance/full${query}`,
-        true,
-      );
+  const data = result?.data;
+  const attendees = data?.attendees || [];
+  const attendedCount = attendees.filter((a) => a.attended).length;
 
-      setData(result.data);
-    } catch (err) {
-      console.error(err);
-      setError("Failed to load attendees.");
-    }
-  }
-
-  useEffect(() => {
-    load();
-
-    const interval = setInterval(() => {
-      load(search);
-    }, 4000);
-
-    return () => clearInterval(interval);
-
-    // We intentionally only restart polling when the event ID changes.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
-
-  async function handleSearchSubmit(e) {
+  function handleSearchSubmit(e) {
     e.preventDefault();
-    await load(search);
+    setSubmittedSearch(search);
   }
 
-  async function handleSearchChange(value) {
+  function handleSearchChange(value) {
     setSearch(value);
-
-    // Restore the complete attendee list when search is cleared.
     if (!value.trim()) {
-      await load("");
+      setSubmittedSearch("");
     }
   }
 
   async function handleMark(userId) {
     try {
       setMarking(userId);
-      setError(null);
+      setActionError(null);
 
-      const result = await apiClient.post(
+      const markResult = await apiClient.post(
         `/admin/dashboard/events/${id}/attendance/${userId}`,
         {},
         true,
       );
 
-      if (!result.data && result.message) {
-        setError(result.message);
+      if (!markResult.data && markResult.message) {
+        setActionError(markResult.message);
         return;
       }
 
-      await load(search);
+      await refresh();
     } catch (err) {
       console.error(err);
-      setError("Failed to mark participant as present.");
+      setActionError("Failed to mark participant as present.");
     } finally {
       setMarking(null);
     }
   }
-
-  const attendees = data?.attendees || [];
-
-  const attendedCount = attendees.filter(
-    (attendee) => attendee.attended,
-  ).length;
 
   async function handleExport() {
     const filename = `${data.event.name.replace(/[^a-z0-9]/gi, "_")}_attendance.csv`;
@@ -532,18 +500,18 @@ function EventAttendeesModal({ id, onClose }) {
                     <span className="text-slate-400">/</span>
 
                     <span className="text-slate-500">
-                      {attendees.length} attended
+                      {attendees.length} orang hadir
                     </span>
                   </div>
                 </>
               ) : (
                 <>
                   <h2 className="text-lg font-bold text-slate-900">
-                    Event Attendees
+                    Kehadiran Kegiatan
                   </h2>
 
                   <p className="mt-1 text-sm text-slate-500">
-                    Loading attendance...
+                    Memuat Kehadiran...
                   </p>
                 </>
               )}
@@ -565,7 +533,7 @@ function EventAttendeesModal({ id, onClose }) {
                 type="search"
                 value={search}
                 onChange={(e) => handleSearchChange(e.target.value)}
-                placeholder="Search participant name..."
+                placeholder="Cari nama anggota..."
                 className="w-full rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
               />
             </div>
@@ -574,14 +542,14 @@ function EventAttendeesModal({ id, onClose }) {
               type="submit"
               className="shrink-0 rounded-lg bg-slate-100 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-200"
             >
-              Search
+              Cari
             </button>
           </form>
 
           {/* Error */}
-          {error && (
+          {loadError && (
             <div className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3.5 py-2.5 text-sm text-red-700">
-              {error}
+              {loadError}
             </div>
           )}
         </div>
@@ -593,7 +561,7 @@ function EventAttendeesModal({ id, onClose }) {
               <div className="flex items-center gap-3 text-sm text-slate-500">
                 <div className="h-5 w-5 animate-spin rounded-full border-2 border-slate-200 border-t-blue-600" />
 
-                <span>Loading attendees...</span>
+                <span>Memuat Kehadiran...</span>
               </div>
             </div>
           ) : attendees.length === 0 ? (
@@ -604,26 +572,25 @@ function EventAttendeesModal({ id, onClose }) {
 
               <h3 className="font-semibold text-slate-900">
                 {search.trim()
-                  ? "No participants found"
-                  : "No participants yet"}
+                  ? "Anggota tidak ditemukan"
+                  : "Belum ada yang hadir"}
               </h3>
 
               <p className="mt-1 text-sm text-slate-500">
                 {search.trim()
-                  ? "Try a different search term."
-                  : "No participants are currently registered for this event."}
+                  ? "Coba kata kunci pencarian berbeda."
+                  : "Belum ada kehadiran di acara ini."}
               </p>
             </div>
           ) : (
             <div>
               <div className="mb-3 flex items-center justify-between">
                 <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-                  Participants
+                  Hadirin
                 </p>
 
                 <p className="text-xs text-slate-400">
-                  {attendees.length}{" "}
-                  {attendees.length === 1 ? "participant" : "participants"}
+                  {attendees.length} {"hadirin"}
                 </p>
               </div>
 
@@ -643,21 +610,42 @@ function EventAttendeesModal({ id, onClose }) {
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end border-t border-slate-200 px-6 py-4">
-          <button
-            onClick={handleExport}
-            className="rounded-lg px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-100"
-          >
-            Export CSV
-          </button>
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 px-6 py-4">
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={onEdit}
+              className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
+            >
+              Edit
+            </button>
 
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-lg px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-100"
-          >
-            Close
-          </button>
+            <button
+              type="button"
+              onClick={onDelete}
+              className="rounded-lg border border-red-200 px-3 py-2 text-sm font-medium text-red-600 transition hover:bg-red-50"
+            >
+              Hapus
+            </button>
+          </div>
+
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={handleExport}
+              className="rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100"
+            >
+              Export CSV
+            </button>
+
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100"
+            >
+              Tutup
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -667,12 +655,12 @@ function EventAttendeesModal({ id, onClose }) {
 function AttendeeRow({ attendee, isLast, marking, onMark }) {
   return (
     <div
-      className={`flex items-center justify-between gap-4 px-4 py-3.5 transition hover:bg-slate-50 ${
+      className={`flex items-center gap-4 px-4 py-3.5 transition hover:bg-slate-50 ${
         !isLast ? "border-b border-slate-200" : ""
       }`}
     >
       {/* Participant */}
-      <div className="flex min-w-0 items-center gap-3">
+      <div className="flex min-w-0 flex-1 items-center gap-3">
         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-600">
           {getInitials(attendee.full_name)}
         </div>
@@ -683,18 +671,35 @@ function AttendeeRow({ attendee, isLast, marking, onMark }) {
           </p>
 
           <p className="mt-0.5 truncate text-xs text-slate-400">
-            {attendee.university || "-"}
+            {attendee.university || "-"} - {attendee.stambuk || "-"}
           </p>
         </div>
       </div>
 
-      {/* Attendance status */}
-      <div className="shrink-0">
+      {/* Statuses */}
+      <div className="flex shrink-0 items-center gap-2">
+        {/* Form Status */}
+        <span
+          className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${
+            attendee.already_fill_form
+              ? "bg-green-50 text-green-700"
+              : "bg-orange-50 text-orange-700"
+          }`}
+        >
+          <span
+            className={`h-1.5 w-1.5 rounded-full ${
+              attendee.already_fill_form ? "bg-green-500" : "bg-orange-500"
+            }`}
+          />
+          {attendee.already_fill_form ? "Sudah Isi Form" : "Belum Isi Form"}
+        </span>
+
+        {/* Attendance Status */}
         {attendee.attended ? (
-          <div className="flex flex-col items-end gap-1">
+          <div className="flex items-center gap-1.5">
             <span className="inline-flex items-center gap-1.5 rounded-full bg-green-50 px-2.5 py-1 text-xs font-semibold text-green-700">
               <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
-              Present
+              Hadir
             </span>
 
             {attendee.checked_in_at && (
@@ -710,7 +715,7 @@ function AttendeeRow({ attendee, isLast, marking, onMark }) {
             disabled={marking}
             className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {marking ? "Marking..." : "Mark Present"}
+            {marking ? "Menandai..." : "Tandai Hadir"}
           </button>
         )}
       </div>
@@ -735,40 +740,29 @@ function formatCheckInTime(value) {
 }
 
 function EditEventModal({ id, onClose, onSaved }) {
+  const { data: result } = useSWR(`/admin/events/${id}`, fetcher);
   const [form, setForm] = useState(null);
   const [error, setError] = useState(null);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    let mounted = true;
+    if (!result) return;
 
-    async function loadEvent() {
-      try {
-        setError(null);
-
-        const result = await apiClient.get(`/admin/events/${id}`, true);
-
-        if (mounted) {
-          setForm({
-            ...result.data,
-            event_datetime: toWibInputValue(result.data.event_datetime),
-          });
-        }
-      } catch (err) {
-        console.error(err);
-
-        if (mounted) {
-          setError("Failed to load event.");
-        }
-      }
+    if (result.code === "network_error") {
+      setError("You're offline. Check your internet connection and try again.");
+      return;
     }
 
-    loadEvent();
-
-    return () => {
-      mounted = false;
-    };
-  }, [id]);
+    if (result.data) {
+      setForm({
+        ...result.data,
+        event_datetime: toWibInputValue(result.data.event_datetime),
+        is_active: Boolean(result.data.is_active),
+      });
+    } else {
+      setError("Failed to load event.");
+    }
+  }, [result]);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -798,14 +792,14 @@ function EditEventModal({ id, onClose, onSaved }) {
       );
 
       if (!result.data) {
-        setError(result.message || "Failed to update event.");
+        setError(result.message || "Gagal Update Kegiatan.");
         return;
       }
 
       onSaved();
     } catch (err) {
       console.error(err);
-      setError("Failed to update event.");
+      setError("Gagal Update Kegiatan.");
     } finally {
       setSaving(false);
     }
@@ -820,7 +814,7 @@ function EditEventModal({ id, onClose, onSaved }) {
           ) : (
             <div className="flex items-center gap-3 text-sm text-slate-500">
               <div className="h-5 w-5 animate-spin rounded-full border-2 border-slate-200 border-t-blue-600" />
-              Loading event...
+              Memuat Kegiatan...
             </div>
           )}
         </div>
@@ -837,7 +831,7 @@ function EditEventModal({ id, onClose, onSaved }) {
       <form onSubmit={handleSubmit}>
         <div className="space-y-4 px-6 py-5">
           <FormField
-            label="Event Name"
+            label="Nama Kegiatan"
             value={form.name || ""}
             onChange={(value) => setForm({ ...form, name: value })}
             placeholder="Event name"
@@ -845,7 +839,7 @@ function EditEventModal({ id, onClose, onSaved }) {
           />
 
           <FormField
-            label="Event Date & Time"
+            label="Tanggal & Waktu Kegiatan"
             value={form.event_datetime || ""}
             onChange={(value) => setForm({ ...form, event_datetime: value })}
             type="datetime-local"
@@ -855,14 +849,14 @@ function EditEventModal({ id, onClose, onSaved }) {
           />
 
           <FormField
-            label="Location"
+            label="Lokasi"
             value={form.location || ""}
             onChange={(value) => setForm({ ...form, location: value })}
             placeholder="Location"
           />
 
           <FormField
-            label="Check-in opens"
+            label="Check-in dibuka"
             value={Number(form.checkin_open_minutes || 0) / 60}
             onChange={(value) =>
               setForm({
@@ -873,12 +867,12 @@ function EditEventModal({ id, onClose, onSaved }) {
             type="number"
             min="0"
             step="0.5"
-            suffix="hours before"
+            suffix="jam sebelum mulai"
             required
           />
 
           <FormField
-            label="Check-in closes"
+            label="Check-in ditutup"
             value={Number(form.checkin_close_minutes || 0) / 60}
             onChange={(value) =>
               setForm({
@@ -889,7 +883,7 @@ function EditEventModal({ id, onClose, onSaved }) {
             type="number"
             min="0"
             step="0.5"
-            suffix="hours after start"
+            suffix="jam setelah mulai"
             required
           />
 
@@ -902,7 +896,7 @@ function EditEventModal({ id, onClose, onSaved }) {
               }
               className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
             />
-            Active
+            Aktif
           </label>
 
           {error && (

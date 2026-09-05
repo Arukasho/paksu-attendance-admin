@@ -41,3 +41,5 @@ export const apiClient = {
   patch: (path, body, auth) => request("PATCH", path, body, auth),
   delete: (path, auth) => request("DELETE", path, undefined, auth),
 };
+
+export const fetcher = (path) => apiClient.get(path, true);
